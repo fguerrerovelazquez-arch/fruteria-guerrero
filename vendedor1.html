@@ -157,32 +157,14 @@ input:focus,select:focus{outline:2px solid #45566B;border-color:#45566B;}
     <div style="font-size:48px;margin-bottom:10px;">🍉</div>
     <div style="color:#fff;font-size:22px;font-weight:500;margin-bottom:4px;">Frutería Guerrero</div>
     <div style="color:#9CA6AF;font-size:14px;margin-bottom:30px;">Nota de pedido — Acceso restringido</div>
-    <input type="password" id="passInput" placeholder="Contraseña" style="font-size:20px;padding:14px 18px;border-radius:10px;border:none;width:220px;text-align:center;font-family:inherit;background:#fff;color:#22262B;">
+    <input type="email" id="loginEmail" placeholder="Correo" autocomplete="username" style="font-size:18px;padding:14px 18px;border-radius:10px;border:none;width:240px;text-align:center;font-family:inherit;background:#fff;color:#22262B;display:block;margin:0 auto 10px;">
+    <input type="password" id="loginPass" placeholder="Contraseña" autocomplete="current-password" style="font-size:18px;padding:14px 18px;border-radius:10px;border:none;width:240px;text-align:center;font-family:inherit;background:#fff;color:#22262B;display:block;margin:0 auto;">
     <div style="margin-top:14px;">
-      <button onclick="verificarPass()" style="font-size:17px;font-weight:600;padding:12px 30px;border-radius:10px;border:none;background:#45566B;color:#fff;cursor:pointer;font-family:inherit;">Entrar</button>
+      <button id="btnLogin" style="font-size:17px;font-weight:600;padding:12px 30px;border-radius:10px;border:none;background:#45566B;color:#fff;cursor:pointer;font-family:inherit;">Entrar</button>
     </div>
-    <div id="passError" style="color:#E57373;font-size:14px;margin-top:12px;display:none;">Contraseña incorrecta</div>
+    <div id="loginError" style="color:#E57373;font-size:14px;margin-top:12px;display:none;">Correo o contraseña incorrectos</div>
   </div>
 </div>
-<script>
-// ======= CONTRASEÑA — cámbiala aquí =======
-const CLAVE = "guerrero2026";
-// ==========================================
-function verificarPass(){
-  const input=document.getElementById('passInput').value;
-  if(input===CLAVE){
-    document.getElementById('loginScreen').style.display='none';
-    sessionStorage.setItem('fgAuth','1');
-  } else {
-    document.getElementById('passError').style.display='block';
-    document.getElementById('passInput').value='';
-    document.getElementById('passInput').focus();
-  }
-}
-document.getElementById('passInput').addEventListener('keydown',e=>{if(e.key==='Enter')verificarPass();});
-// Si ya se autenticó en esta sesión, no pedir otra vez
-if(sessionStorage.getItem('fgAuth')==='1') document.getElementById('loginScreen').style.display='none';
-</script>
 
 <div class="wrap">
   <div class="hdr">
@@ -192,7 +174,10 @@ if(sessionStorage.getItem('fgAuth')==='1') document.getElementById('loginScreen'
         <div class="badge">Nota de pedido</div>
         <div class="loc">Mercado de Abastos, Ciudad Obregón</div>
       </div>
-      <div class="fecha" id="fechaHoy"></div>
+      <div style="text-align:right;">
+        <div class="fecha" id="fechaHoy"></div>
+        <button id="btnLogout" style="margin-top:8px;font-size:12px;font-weight:600;padding:5px 12px;border-radius:6px;border:1px solid #4E5C6B;background:none;color:#C7D0DA;cursor:pointer;font-family:inherit;">Salir</button>
+      </div>
     </div>
   </div>
 
@@ -362,6 +347,8 @@ if(sessionStorage.getItem('fgAuth')==='1') document.getElementById('loginScreen'
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js";
 import { getDatabase, ref, push, set, get, update, onValue, runTransaction }
   from "https://www.gstatic.com/firebasejs/12.16.0/firebase-database.js";
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut }
+  from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
 
 const app = initializeApp({
   apiKey: "AIzaSyAGZI80ss7pDXUZcj3tJ060DcQciN3POEs",
@@ -373,6 +360,32 @@ const app = initializeApp({
   appId: "1:79789288900:web:d0ba7c895414ddd49c4891"
 });
 const db = getDatabase(app);
+const auth = getAuth(app);
+
+/* ============ ESCAPE HTML (contra XSS en datos de Firebase) ============ */
+function esc(s){
+  return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+/* ============ AUTENTICACIÓN ============ */
+async function iniciarSesion(){
+  const email=document.getElementById('loginEmail').value.trim();
+  const pass=document.getElementById('loginPass').value;
+  const err=document.getElementById('loginError');
+  err.style.display='none';
+  try{
+    await signInWithEmailAndPassword(auth,email,pass);
+  }catch(e){
+    err.style.display='block';
+  }
+}
+document.getElementById('btnLogin').addEventListener('click',iniciarSesion);
+document.getElementById('loginPass').addEventListener('keydown',e=>{if(e.key==='Enter')iniciarSesion();});
+document.getElementById('loginEmail').addEventListener('keydown',e=>{if(e.key==='Enter')iniciarSesion();});
+document.getElementById('btnLogout').addEventListener('click',()=>signOut(auth));
+onAuthStateChanged(auth,user=>{
+  document.getElementById('loginScreen').style.display=user?'none':'flex';
+});
 
 /* ============ PRODUCTOS ============ */
 const PRODUCTOS=[
@@ -467,29 +480,37 @@ onValue(ref(db,'clientes'),snap=>{
   clientes=Object.entries(data).map(([k,v])=>({id:k,...v}));
 });
 
+let ultimoResCliente=[];
 window.buscarCliente=function(){
   const q=document.getElementById('clienteInput').value.trim().toLowerCase();
   const list=document.getElementById('clienteList');
   if(q.length===0){list.classList.remove('open');list.innerHTML='';return;}
   const res=clientes.filter(c=>c.nombre.toLowerCase().includes(q)).slice(0,8);
-  let html=res.map(c=>{
+  ultimoResCliente=res;
+  let html=res.map((c,i)=>{
     const idx=c.nombre.toLowerCase().indexOf(q);
-    const hl=c.nombre.slice(0,idx)+'<b>'+c.nombre.slice(idx,idx+q.length)+'</b>'+c.nombre.slice(idx+q.length);
-    return `<div class="ac-item" onclick="selCliente('${c.nombre.replace(/'/g,"\\'")}')">${hl}</div>`;
+    const hl=esc(c.nombre.slice(0,idx))+'<b>'+esc(c.nombre.slice(idx,idx+q.length))+'</b>'+esc(c.nombre.slice(idx+q.length));
+    return `<div class="ac-item" onclick="selClienteIdx(${i})">${hl}</div>`;
   }).join('');
-  html+=`<div class="ac-item ac-new" onclick="abrirModalCliente('${q.replace(/'/g,"\\'")}')">+ Nuevo cliente "${q}…"</div>`;
+  html+=`<div class="ac-item ac-new" onclick="abrirModalClienteDesdeBusqueda()">+ Nuevo cliente "${esc(q)}…"</div>`;
   list.innerHTML=html;
   list.classList.add('open');
 };
-window.selCliente=function(nombre){
-  clienteSeleccionado=nombre;
-  document.getElementById('clienteInput').value=nombre;
+window.selClienteIdx=function(i){
+  const c=ultimoResCliente[i];
+  if(!c)return;
+  clienteSeleccionado=c.nombre;
+  document.getElementById('clienteInput').value=c.nombre;
   document.getElementById('clienteList').classList.remove('open');
 };
 window.abrirModalCliente=function(pre){
   document.getElementById('nuevoClienteNombre').value=pre||'';
   document.getElementById('modalCliente').classList.add('open');
   setTimeout(()=>document.getElementById('nuevoClienteNombre').focus(),100);
+};
+window.abrirModalClienteDesdeBusqueda=function(){
+  const q=document.getElementById('clienteInput').value.trim();
+  window.abrirModalCliente(q);
 };
 window.cerrarModalCliente=function(){document.getElementById('modalCliente').classList.remove('open');};
 window.guardarCliente=function(){
@@ -504,7 +525,10 @@ window.guardarCliente=function(){
 /* ============ PRODUCTOS BÚSQUEDA ============ */
 function renderChips(){
   const cont=document.getElementById('chipsFrec');
-  cont.innerHTML=FRECUENTES.map(nom=>`<div class="chip" onclick="addProducto('${nom.replace(/'/g,"\\'")}')">${nom}</div>`).join('');
+  cont.innerHTML=FRECUENTES.map(nom=>{
+    const idx=PRODUCTOS.findIndex(p=>p.nombre===nom);
+    return `<div class="chip" onclick="addProductoIdx(${idx})">${esc(nom)}</div>`;
+  }).join('');
 }
 renderChips();
 
@@ -513,14 +537,14 @@ window.buscarProducto=function(){
   const ul=document.getElementById('prodList');
   if(q.length===0){ul.classList.remove('open');ul.innerHTML='';return;}
   const res=PRODUCTOS.filter(p=>p.nombre.toLowerCase().includes(q)).slice(0,10);
-  ul.innerHTML=res.map(p=>`<li onclick="addProducto('${p.nombre.replace(/'/g,"\\'")}')">${p.nombre}</li>`).join('');
+  ul.innerHTML=res.map(p=>`<li onclick="addProductoIdx(${PRODUCTOS.indexOf(p)})">${esc(p.nombre)}</li>`).join('');
   ul.classList.toggle('open',res.length>0);
 };
 
-window.addProducto=function(nombre){
-  const p=PRODUCTOS.find(x=>x.nombre===nombre);
+window.addProductoIdx=function(idx){
+  const p=PRODUCTOS[idx];
   if(!p)return;
-  const precioDia=obtenerPrecioDia(nombre);
+  const precioDia=obtenerPrecioDia(p.nombre);
   pedido.push({nombre:p.nombre,precio:precioDia||p.precio,pedido:1,unidad:'kg'});
   document.getElementById('buscarProd').value='';
   document.getElementById('prodList').classList.remove('open');
@@ -557,7 +581,7 @@ function renderTabla(){
   card.style.display='block';btn.style.display='block';
   body.innerHTML=pedido.map((item,i)=>`<tr>
     <td class="num">${i+1}</td>
-    <td class="pname">${item.nombre}</td>
+    <td class="pname">${esc(item.nombre)}</td>
     <td><div class="qty-wrap"><input type="number" step="0.5" min="0" value="${item.pedido}" onchange="updPedido(${i},'pedido',this.value)"><button class="ubtn" onclick="cambiarUnidad(${i})">${item.unidad||'kg'}</button></div></td>
     <td><input type="number" step="0.5" min="0" value="${item.precio}" onchange="updPedido(${i},'precio',this.value)"></td>
     <td><button class="del" onclick="delPedido(${i})">✕</button></td>
@@ -660,7 +684,7 @@ function renderPedidosDia(){
     return `<div class="ocard">
       <div class="ocard-left">
         <div class="ocard-folio">FOLIO #${p.folio}</div>
-        <div class="ocard-cliente">${p.cliente}</div>
+        <div class="ocard-cliente">${esc(p.cliente)}</div>
         <div class="ocard-hora">${p.hora} · ${p.productos?p.productos.length:0} productos</div>
       </div>
       <div class="ocard-center">
@@ -696,7 +720,7 @@ function renderDetalle(id){
     const u=pr.unidad||'kg';
     let diff='';
     if(pr.surtido!==null&&pr.surtido!==pr.pedido) diff=`<div class="r2"><span>pedido: ${pr.pedido} ${u}</span></div>`;
-    return `<div class="titem"><div class="r1"><span>${pr.nombre}</span><span>$${importe.toFixed(2)}</span></div><div class="r2"><span>${surtido} ${u} x $${pr.precio.toFixed(2)}</span></div>${diff}</div>`;
+    return `<div class="titem"><div class="r1"><span>${esc(pr.nombre)}</span><span>$${importe.toFixed(2)}</span></div><div class="r2"><span>${surtido} ${u} x $${pr.precio.toFixed(2)}</span></div>${diff}</div>`;
   }).join('');
   const totalCalc=prods.reduce((s,pr)=>{const sur=pr.surtido!==null?pr.surtido:pr.pedido;return s+sur*pr.precio;},0);
 
@@ -713,7 +737,7 @@ function renderDetalle(id){
         const sur=pr.surtido!==null?pr.surtido:pr.pedido;
         return `<div class="chk-item ${checks[i]?'done':''}" onclick="toggleCheck('${id}',${i})">
           <div class="chk-box">${checks[i]?'✓':''}</div>
-          <div class="chk-name">${pr.nombre}</div>
+          <div class="chk-name">${esc(pr.nombre)}</div>
           <div class="chk-detail">${sur} ${u}</div>
         </div>`;
       }).join('')}
@@ -727,7 +751,7 @@ function renderDetalle(id){
       <div class="sub">Mercado de Abastos, Ciudad Obregón</div>
       <div class="sub">Fecha: ${p.fecha} · ${p.hora}</div>
       <hr>
-      <div class="tline"><span>Cliente:</span><span>${p.cliente}</span></div>
+      <div class="tline"><span>Cliente:</span><span>${esc(p.cliente)}</span></div>
       <div class="tline"><span>Folio:</span><span>#${p.folio}</span></div>
       <hr>
       ${items}
@@ -929,7 +953,7 @@ window.imprimirTicket=function(){
 window.abrirModalCobro=function(){
   const p=pedidosDB[detallePedidoId];if(!p)return;
   const total=(p.productos||[]).reduce((s,pr)=>{const sur=pr.surtido!==null?pr.surtido:pr.pedido;return s+sur*pr.precio;},0);
-  document.getElementById('cobroInfo').innerHTML=`<b>${p.cliente}</b> — Folio #${p.folio}<br>Total: <b style="font-size:20px;">$${total.toFixed(2)}</b>`;
+  document.getElementById('cobroInfo').innerHTML=`<b>${esc(p.cliente)}</b> — Folio #${p.folio}<br>Total: <b style="font-size:20px;">$${total.toFixed(2)}</b>`;
   document.getElementById('abonoSection').style.display='none';
   document.getElementById('montoAbono').value='';
   document.getElementById('modalCobro').classList.add('open');
@@ -989,11 +1013,12 @@ window.renderClientes=function(){
 
   const cont=document.getElementById('listaClientes');
   if(entries.length===0){cont.innerHTML='<div class="empty">No hay clientes que mostrar.</div>';return;}
-  cont.innerHTML=entries.map(([nombre,b])=>{
+  ultimoEntriesClientes=entries;
+  cont.innerHTML=entries.map(([nombre,b],i)=>{
     const deuda=b.saldoPendiente>0;
-    return `<div class="ocard" style="cursor:pointer;" onclick="verEdoCta('${nombre.replace(/'/g,"\\'")}')">
+    return `<div class="ocard" style="cursor:pointer;" onclick="verEdoCtaIdx(${i})">
       <div class="ocard-left">
-        <div class="ocard-cliente">${nombre}</div>
+        <div class="ocard-cliente">${esc(nombre)}</div>
         <div class="ocard-hora">${b.pedidos} pedido${b.pedidos!==1?'s':''} cerrado${b.pedidos!==1?'s':''}</div>
       </div>
       <div class="ocard-right">
@@ -1006,8 +1031,11 @@ window.renderClientes=function(){
 };
 
 /* ============ ESTADO DE CUENTA ============ */
-window.verEdoCta=function(nombre){
-  edoCtaCliente=nombre;
+let ultimoEntriesClientes=[];
+window.verEdoCtaIdx=function(i){
+  const entry=ultimoEntriesClientes[i];
+  if(!entry)return;
+  edoCtaCliente=entry[0];
   renderEdoCta();
   showPage('edocta');
 };
@@ -1019,7 +1047,7 @@ function renderEdoCta(){
   pedidosCliente.forEach(([,p])=>{totalVentas+=(p.total||0);totalPagado+=(p.montoPagado||0);saldoPendiente+=(p.saldoPendiente||0);});
 
   let html=`<div class="edo-header">
-    <div class="edo-nombre">${nombre}</div>
+    <div class="edo-nombre">${esc(nombre)}</div>
     <div class="edo-stats">
       <div class="edo-stat"><div class="val val-blue">$${totalVentas.toFixed(2)}</div><div class="lbl">Total vendido</div></div>
       <div class="edo-stat"><div class="val val-green">$${totalPagado.toFixed(2)}</div><div class="lbl">Total pagado</div></div>
@@ -1132,7 +1160,7 @@ function renderResumen(){
     html+=`<div class="card" style="margin-top:14px;"><div class="card-title">Clientes del día</div>`;
     topClientes.forEach(([nombre,data])=>{
       html+=`<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px dashed #E1DFD8;font-size:15px;">
-        <span><b>${nombre}</b> · ${data.pedidos} pedido${data.pedidos>1?'s':''}</span>
+        <span><b>${esc(nombre)}</b> · ${data.pedidos} pedido${data.pedidos>1?'s':''}</span>
         <span style="font-weight:700;">$${data.total.toFixed(2)}</span>
       </div>`;
     });
@@ -1147,10 +1175,10 @@ window.abrirEditar=function(id){
   editPedidoId=id;
   const p=pedidosDB[id];if(!p)return;
   document.getElementById('editFolio').textContent='Folio #'+p.folio;
-  let html=`<p style="margin-bottom:12px;font-size:15px;color:#5B5F63;">Cliente: <b>${p.cliente}</b></p>`;
+  let html=`<p style="margin-bottom:12px;font-size:15px;color:#5B5F63;">Cliente: <b>${esc(p.cliente)}</b></p>`;
   html+='<table class="tbl"><thead><tr><th>#</th><th>Producto</th><th>Pedido</th><th>Precio</th></tr></thead><tbody>';
   (p.productos||[]).forEach((pr,i)=>{
-    html+=`<tr><td class="num">${i+1}</td><td class="pname">${pr.nombre}</td>
+    html+=`<tr><td class="num">${i+1}</td><td class="pname">${esc(pr.nombre)}</td>
       <td><div style="display:flex;align-items:center;gap:4px;"><input type="number" step="0.5" min="0" value="${pr.pedido}" id="editPed${i}" style="width:60px;text-align:center;padding:6px;"><button class="ubtn" id="editUni${i}" onclick="ciclarUnidadEdit(${i})">${pr.unidad||'kg'}</button></div></td>
       <td><input type="number" step="0.5" min="0" value="${pr.precio}" id="editPre${i}" style="width:80px;text-align:center;padding:6px;"></td></tr>`;
   });

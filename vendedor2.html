@@ -65,6 +65,21 @@ body{background:#EFEEE9;color:#22262B;font-family:-apple-system,BlinkMacSystemFo
 </style>
 </head>
 <body>
+<!-- PANTALLA DE ACCESO -->
+<div id="loginScreen" style="display:flex;position:fixed;inset:0;background:#2C3540;z-index:999;align-items:center;justify-content:center;">
+  <div style="text-align:center;padding:30px;">
+    <div style="font-size:48px;margin-bottom:10px;">🍉</div>
+    <div style="color:#fff;font-size:22px;font-weight:500;margin-bottom:4px;">Frutería Guerrero</div>
+    <div style="color:#9CA6AF;font-size:14px;margin-bottom:30px;">Nota de preparación — Acceso restringido</div>
+    <input type="email" id="loginEmail" placeholder="Correo" autocomplete="username" style="font-size:18px;padding:14px 18px;border-radius:10px;border:none;width:240px;text-align:center;font-family:inherit;background:#fff;color:#22262B;display:block;margin:0 auto 10px;">
+    <input type="password" id="loginPass" placeholder="Contraseña" autocomplete="current-password" style="font-size:18px;padding:14px 18px;border-radius:10px;border:none;width:240px;text-align:center;font-family:inherit;background:#fff;color:#22262B;display:block;margin:0 auto;">
+    <div style="margin-top:14px;">
+      <button id="btnLogin" style="font-size:17px;font-weight:600;padding:12px 30px;border-radius:10px;border:none;background:#45566B;color:#fff;cursor:pointer;font-family:inherit;">Entrar</button>
+    </div>
+    <div id="loginError" style="color:#E57373;font-size:14px;margin-top:12px;display:none;">Correo o contraseña incorrectos</div>
+  </div>
+</div>
+
 <div class="wrap">
   <div class="hdr">
     <div class="hdr-top">
@@ -73,7 +88,10 @@ body{background:#EFEEE9;color:#22262B;font-family:-apple-system,BlinkMacSystemFo
         <div class="badge">Nota de preparación</div>
         <div class="loc">Mercado de Abastos, Ciudad Obregón</div>
       </div>
-      <div class="fecha" id="fechaHoy"></div>
+      <div style="text-align:right;">
+        <div class="fecha" id="fechaHoy"></div>
+        <button id="btnLogout" style="margin-top:8px;font-size:12px;font-weight:600;padding:5px 12px;border-radius:6px;border:1px solid #4E5C6B;background:none;color:#C7D0DA;cursor:pointer;font-family:inherit;">Salir</button>
+      </div>
     </div>
   </div>
 
@@ -103,6 +121,8 @@ body{background:#EFEEE9;color:#22262B;font-family:-apple-system,BlinkMacSystemFo
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js";
 import { getDatabase, ref, update, onValue }
   from "https://www.gstatic.com/firebasejs/12.16.0/firebase-database.js";
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut }
+  from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
 
 const app = initializeApp({
   apiKey: "AIzaSyAGZI80ss7pDXUZcj3tJ060DcQciN3POEs",
@@ -114,6 +134,32 @@ const app = initializeApp({
   appId: "1:79789288900:web:d0ba7c895414ddd49c4891"
 });
 const db = getDatabase(app);
+const auth = getAuth(app);
+
+/* ============ ESCAPE HTML (contra XSS en datos de Firebase) ============ */
+function esc(s){
+  return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+/* ============ AUTENTICACIÓN ============ */
+async function iniciarSesion(){
+  const email=document.getElementById('loginEmail').value.trim();
+  const pass=document.getElementById('loginPass').value;
+  const err=document.getElementById('loginError');
+  err.style.display='none';
+  try{
+    await signInWithEmailAndPassword(auth,email,pass);
+  }catch(e){
+    err.style.display='block';
+  }
+}
+document.getElementById('btnLogin').addEventListener('click',iniciarSesion);
+document.getElementById('loginPass').addEventListener('keydown',e=>{if(e.key==='Enter')iniciarSesion();});
+document.getElementById('loginEmail').addEventListener('keydown',e=>{if(e.key==='Enter')iniciarSesion();});
+document.getElementById('btnLogout').addEventListener('click',()=>signOut(auth));
+onAuthStateChanged(auth,user=>{
+  document.getElementById('loginScreen').style.display=user?'none':'flex';
+});
 
 let pedidosDB = {};
 let prepActualId = null;
@@ -167,7 +213,7 @@ function renderNuevos(){
   cont.innerHTML=entries.map(([id,p])=>`<div class="ocard">
     <div class="ocard-left">
       <div class="ocard-folio">FOLIO #${p.folio}</div>
-      <div class="ocard-cliente">${p.cliente}</div>
+      <div class="ocard-cliente">${esc(p.cliente)}</div>
       <div class="ocard-hora">${p.hora} · ${p.productos?p.productos.length:0} productos</div>
     </div>
     <div class="ocard-center"><span class="estado estado-nuevo">NUEVO</span></div>
@@ -208,7 +254,7 @@ function renderPrep(){
         <span class="prep-folio">FOLIO #${p.folio}</span>
       </div>
       <div class="prep-cliente">
-        <div class="prep-cliente-name">${p.cliente}</div>
+        <div class="prep-cliente-name">${esc(p.cliente)}</div>
         <div class="lock">🔒</div>
       </div>
     </div>
@@ -220,7 +266,7 @@ function renderPrep(){
           ${(p.productos||[]).map((pr,i)=>{
             const u=pr.unidad||'kg';
             return `<tr>
-            <td class="pname">${pr.nombre}</td>
+            <td class="pname">${esc(pr.nombre)}</td>
             <td><input type="number" class="locked" value="${pr.pedido}" readonly tabindex="-1" style="width:60px;"><span style="font-size:13px;color:#8B8A83;margin-left:4px;">${u}</span></td>
             <td><input type="number" id="surt${i}" step="0.5" min="0" value="${pr.surtido!==null?pr.surtido:''}" placeholder="—" style="width:60px;"><span style="font-size:13px;color:#8B8A83;margin-left:4px;">${u}</span></td>
           </tr>`;}).join('')}
@@ -268,7 +314,7 @@ function renderCompletados(){
     return `<div class="ocard">
       <div class="ocard-left">
         <div class="ocard-folio">FOLIO #${p.folio}</div>
-        <div class="ocard-cliente">${p.cliente}</div>
+        <div class="ocard-cliente">${esc(p.cliente)}</div>
         <div class="ocard-hora">${p.productos?p.productos.length:0} productos</div>
       </div>
       <div class="ocard-center"><span class="estado ${estadoClass}">${estadoLabel}</span></div>
