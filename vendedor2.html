@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=3.0">
+<title>Frutería Guerrero — Nota de Preparación</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+html{font-size:18px;}
+body{background:#EFEEE9;color:#22262B;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;line-height:1.4;min-height:100vh;}
+.wrap{max-width:720px;margin:0 auto;}
+.hdr{background:#2C3540;padding:18px 22px;}
+.hdr-top{display:flex;justify-content:space-between;align-items:flex-start;}
+.hdr h1{color:#fff;font-size:22px;font-weight:500;}
+.hdr .badge{display:inline-block;margin-top:4px;color:#C7D0DA;font-size:11px;font-weight:600;letter-spacing:.7px;text-transform:uppercase;border:1px solid #4E5C6B;border-radius:4px;padding:2px 8px;}
+.hdr .loc{color:#9CA6AF;font-size:13px;margin-top:6px;}
+.hdr .fecha{color:#E4E7EA;font-size:14px;font-weight:500;white-space:nowrap;}
+.tabs{display:flex;background:#E6E4DD;border-bottom:1px solid #D9D7D1;flex-wrap:wrap;}
+.tab{padding:13px 18px;font-size:15px;font-weight:500;color:#8B897F;cursor:pointer;position:relative;border:none;background:none;font-family:inherit;}
+.tab.active{color:#2C3540;font-weight:600;background:#fff;}
+.tab.active::after{content:'';position:absolute;bottom:0;left:0;right:0;height:3px;background:#45566B;}
+.tab .cnt{background:#2C5A7A;color:#fff;font-size:11px;font-weight:600;border-radius:10px;padding:1px 7px;margin-left:5px;vertical-align:middle;}
+.page{display:none;padding:18px 22px 40px;}
+.page.active{display:block;}
+.card{background:#fff;border:1px solid #D9D7D1;border-radius:10px;padding:16px 18px;margin-bottom:16px;}
+.card-title{font-size:13px;font-weight:600;color:#5B5F63;margin-bottom:10px;text-transform:uppercase;letter-spacing:.4px;}
+.btn{font-size:16px;font-weight:600;padding:12px 18px;border-radius:8px;border:none;cursor:pointer;font-family:inherit;white-space:nowrap;}
+.btn-green{background:#4B7057;color:#fff;width:100%;font-size:17px;padding:14px;}
+.btn-primary{background:#45566B;color:#fff;}
+.btn-ghost{background:#fff;color:#5B5F63;border:1px solid #C7C5BD;padding:8px 16px;}
+.btn-small{font-size:14px;padding:8px 16px;}
+.btn:active{opacity:.85;}
+/* ORDER CARDS */
+.ocard{background:#fff;border:1px solid #D9D7D1;border-radius:10px;padding:16px 18px;margin-bottom:14px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;}
+.ocard-left{flex:1 1 180px;}
+.ocard-folio{font-size:12px;color:#8B8A83;font-weight:600;letter-spacing:.3px;}
+.ocard-cliente{font-size:17px;font-weight:700;margin:4px 0 2px;}
+.ocard-hora{font-size:12.5px;color:#8B8A83;}
+.ocard-center{flex:0 0 auto;}
+.estado{display:inline-block;font-size:12.5px;font-weight:700;color:#fff;padding:5px 14px;border-radius:6px;}
+.estado-nuevo{background:#2C5A7A;}
+.estado-prep{background:#9C7A3C;}
+.estado-comp{background:#4B7057;}
+.ocard-right{flex:0 0 140px;text-align:right;}
+.ocard-total-lbl{font-size:12px;color:#8B8A83;font-weight:600;}
+.ocard-total{font-size:18px;font-weight:700;}
+.ocard-actions{margin-top:8px;}
+.empty-box{background:#fff;border:1px solid #D9D7D1;border-radius:12px;padding:50px 20px;text-align:center;}
+.empty-box .icon{font-size:40px;margin-bottom:8px;}
+.empty-box .msg{font-size:16px;color:#8B8A83;}
+.empty-box .sub{font-size:13px;color:#B5B0A3;margin-top:6px;}
+/* PREP VIEW */
+.prep-cliente{display:flex;align-items:center;gap:10px;}
+.prep-cliente-name{flex:1;padding:10px 14px;background:#EEECE6;border-radius:8px;border:1px solid #C7C5BD;font-size:17px;font-weight:600;color:#22262B;}
+.prep-folio{font-size:13px;font-weight:700;color:#9C7A3C;}
+.lock{font-size:18px;padding:8px 12px;background:#EEECE6;border-radius:8px;border:1px solid #C7C5BD;}
+.tbl{width:100%;border-collapse:collapse;margin-top:8px;}
+.tbl th{text-align:left;font-size:12px;font-weight:600;color:#8B8A83;text-transform:uppercase;letter-spacing:.4px;padding:6px 4px;border-bottom:1px solid #D9D7D1;}
+.tbl td{padding:10px 4px;border-bottom:1px dashed #E1DFD8;vertical-align:middle;}
+.tbl .pname{font-weight:600;font-size:16px;color:#22262B;}
+.tbl input{width:80px;text-align:center;padding:8px;font-size:17px;border-radius:8px;border:1.5px solid #45566B;background:#FBFAF8;color:#22262B;font-family:inherit;}
+.tbl input:focus{outline:2px solid #45566B;}
+.tbl .locked{background:#EEECE6;border-color:#C7C5BD;color:#5B5F63;}
+@media(max-width:500px){html{font-size:17px;}.hdr{padding:14px 16px;}.page{padding:14px 16px 30px;}.tab{padding:12px 14px;font-size:14px;}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hdr">
+    <div class="hdr-top">
+      <div>
+        <h1>Frutería Guerrero</h1>
+        <div class="badge">Nota de preparación</div>
+        <div class="loc">Mercado de Abastos, Ciudad Obregón</div>
+      </div>
+      <div class="fecha" id="fechaHoy"></div>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="showPage('nuevo')" id="tabNuevo">Nuevo pedido <span class="cnt" id="cntNuevo" style="display:none"></span></button>
+    <button class="tab" onclick="showPage('prep')">En preparación</button>
+    <button class="tab" onclick="showPage('completados')">Pedidos completados</button>
+  </div>
+
+  <!-- NUEVO PEDIDO (folios entrantes) -->
+  <div class="page active" id="pageNuevo">
+    <div id="listaNuevos"></div>
+  </div>
+
+  <!-- EN PREPARACIÓN -->
+  <div class="page" id="pagePrep">
+    <div id="prepContenido"></div>
+  </div>
+
+  <!-- COMPLETADOS -->
+  <div class="page" id="pageCompletados">
+    <div id="listaCompletados"></div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js";
+import { getDatabase, ref, update, onValue }
+  from "https://www.gstatic.com/firebasejs/12.16.0/firebase-database.js";
+
+const app = initializeApp({
+  apiKey: "AIzaSyAGZI80ss7pDXUZcj3tJ060DcQciN3POEs",
+  authDomain: "fruteria-guerrero.firebaseapp.com",
+  databaseURL: "https://fruteria-guerrero-default-rtdb.firebaseio.com",
+  projectId: "fruteria-guerrero",
+  storageBucket: "fruteria-guerrero.firebasestorage.app",
+  messagingSenderId: "79789288900",
+  appId: "1:79789288900:web:d0ba7c895414ddd49c4891"
+});
+const db = getDatabase(app);
+
+let pedidosDB = {};
+let prepActualId = null;
+
+function hoyTexto(){
+  const d=new Date();
+  const meses=["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+  return `${d.getDate()} de ${meses[d.getMonth()]} de ${d.getFullYear()}`;
+}
+function hoyISO(){const d=new Date();const off=d.getTimezoneOffset();return new Date(d.getTime()-off*60000).toISOString().slice(0,10);}
+document.getElementById('fechaHoy').textContent=hoyTexto();
+
+/* ============ TABS ============ */
+window.showPage=function(p){
+  document.querySelectorAll('.page').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(el=>el.classList.remove('active'));
+  const tabs=document.querySelectorAll('.tab');
+  if(p==='nuevo'){document.getElementById('pageNuevo').classList.add('active');tabs[0].classList.add('active');renderNuevos();}
+  else if(p==='prep'){document.getElementById('pagePrep').classList.add('active');tabs[1].classList.add('active');renderPrep();}
+  else if(p==='completados'){document.getElementById('pageCompletados').classList.add('active');tabs[2].classList.add('active');renderCompletados();}
+};
+
+/* ============ LISTENER ============ */
+onValue(ref(db,'pedidos'),snap=>{
+  pedidosDB=snap.val()||{};
+  updateCounts();
+  // refresh current page
+  const activePage=document.querySelector('.page.active');
+  if(activePage.id==='pageNuevo') renderNuevos();
+  else if(activePage.id==='pagePrep') renderPrep();
+  else if(activePage.id==='pageCompletados') renderCompletados();
+});
+
+function updateCounts(){
+  const hoy=hoyISO();
+  const nuevos=Object.values(pedidosDB).filter(p=>p.fecha===hoy&&p.estado==='NUEVO').length;
+  const cnt=document.getElementById('cntNuevo');
+  if(nuevos>0){cnt.textContent=nuevos;cnt.style.display='inline';}
+  else cnt.style.display='none';
+}
+
+/* ============ NUEVOS ============ */
+function renderNuevos(){
+  const hoy=hoyISO();
+  const entries=Object.entries(pedidosDB).filter(([,p])=>p.fecha===hoy&&p.estado==='NUEVO').sort((a,b)=>(b[1].timestamps?.creado||0)-(a[1].timestamps?.creado||0));
+  const cont=document.getElementById('listaNuevos');
+  if(entries.length===0){
+    cont.innerHTML='<div class="empty-box"><div class="icon">📋</div><div class="msg">No hay pedidos nuevos por el momento</div><div class="sub">Se actualizará automáticamente cuando lleguen.</div></div>';
+    return;
+  }
+  cont.innerHTML=entries.map(([id,p])=>`<div class="ocard">
+    <div class="ocard-left">
+      <div class="ocard-folio">FOLIO #${p.folio}</div>
+      <div class="ocard-cliente">${p.cliente}</div>
+      <div class="ocard-hora">${p.hora} · ${p.productos?p.productos.length:0} productos</div>
+    </div>
+    <div class="ocard-center"><span class="estado estado-nuevo">NUEVO</span></div>
+    <div class="ocard-right">
+      <button class="btn btn-green btn-small" style="width:auto;" onclick="iniciarPrep('${id}')">Iniciar preparación</button>
+    </div>
+  </div>`).join('');
+}
+
+/* ============ INICIAR PREPARACIÓN ============ */
+window.iniciarPrep=async function(id){
+  prepActualId=id;
+  await update(ref(db,'pedidos/'+id),{estado:'EN_PREPARACION','timestamps/enPreparacion':Date.now()});
+  showPage('prep');
+};
+
+/* ============ EN PREPARACIÓN ============ */
+function renderPrep(){
+  const cont=document.getElementById('prepContenido');
+  // find the one EN_PREPARACION or use prepActualId
+  const hoy=hoyISO();
+  let id=prepActualId;
+  if(!id){
+    const entry=Object.entries(pedidosDB).find(([,p])=>p.fecha===hoy&&p.estado==='EN_PREPARACION');
+    if(entry) id=entry[0];
+  }
+  if(!id||!pedidosDB[id]||pedidosDB[id].estado!=='EN_PREPARACION'){
+    cont.innerHTML='<div class="empty-box"><div class="icon">📦</div><div class="msg">No hay pedido en preparación</div><div class="sub">Ve a "Nuevo pedido" para iniciar uno.</div></div>';
+    return;
+  }
+  const p=pedidosDB[id];
+  prepActualId=id;
+  
+  cont.innerHTML=`
+    <div class="card">
+      <div class="card-title">Cliente</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <span class="prep-folio">FOLIO #${p.folio}</span>
+      </div>
+      <div class="prep-cliente">
+        <div class="prep-cliente-name">${p.cliente}</div>
+        <div class="lock">🔒</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Pedido</div>
+      <table class="tbl">
+        <thead><tr><th>Producto</th><th>Pedido</th><th>Surtido</th></tr></thead>
+        <tbody>
+          ${(p.productos||[]).map((pr,i)=>{
+            const u=pr.unidad||'kg';
+            return `<tr>
+            <td class="pname">${pr.nombre}</td>
+            <td><input type="number" class="locked" value="${pr.pedido}" readonly tabindex="-1" style="width:60px;"><span style="font-size:13px;color:#8B8A83;margin-left:4px;">${u}</span></td>
+            <td><input type="number" id="surt${i}" step="0.5" min="0" value="${pr.surtido!==null?pr.surtido:''}" placeholder="—" style="width:60px;"><span style="font-size:13px;color:#8B8A83;margin-left:4px;">${u}</span></td>
+          </tr>`;}).join('')}
+        </tbody>
+      </table>
+    </div>
+    <button class="btn btn-green" onclick="completarPedido()">Pedido completado</button>
+  `;
+}
+
+/* ============ COMPLETAR PEDIDO ============ */
+window.completarPedido=async function(){
+  if(!prepActualId)return;
+  const p=pedidosDB[prepActualId];
+  const prods=(p.productos||[]).map((pr,i)=>{
+    const val=document.getElementById('surt'+i).value;
+    return {...pr, surtido: val!==''?parseFloat(val):pr.pedido};
+  });
+  const total=prods.reduce((s,pr)=>s+(pr.surtido*pr.precio),0);
+  await update(ref(db,'pedidos/'+prepActualId),{
+    estado:'COMPLETADO',
+    productos:prods,
+    total,
+    'timestamps/completado':Date.now()
+  });
+  alert('✅ Pedido completado. El vendedor 1 ya fue notificado.');
+  prepActualId=null;
+  showPage('completados');
+};
+
+/* ============ COMPLETADOS ============ */
+function renderCompletados(){
+  const hoy=hoyISO();
+  const entries=Object.entries(pedidosDB)
+    .filter(([,p])=>p.fecha===hoy&&(p.estado==='COMPLETADO'||p.estado==='CERRADO'))
+    .sort((a,b)=>(b[1].timestamps?.completado||0)-(a[1].timestamps?.completado||0));
+  const cont=document.getElementById('listaCompletados');
+  if(entries.length===0){
+    cont.innerHTML='<div class="empty-box"><div class="icon">✅</div><div class="msg">Aún no hay pedidos completados hoy</div><div class="sub">Aparecerán aquí cuando termines de preparar uno.</div></div>';
+    return;
+  }
+  cont.innerHTML=entries.map(([id,p])=>{
+    const estadoClass=p.estado==='CERRADO'?'estado-cerr':'estado-comp';
+    const estadoLabel=p.estado==='CERRADO'?'CERRADO':'COMPLETADO';
+    return `<div class="ocard">
+      <div class="ocard-left">
+        <div class="ocard-folio">FOLIO #${p.folio}</div>
+        <div class="ocard-cliente">${p.cliente}</div>
+        <div class="ocard-hora">${p.productos?p.productos.length:0} productos</div>
+      </div>
+      <div class="ocard-center"><span class="estado ${estadoClass}">${estadoLabel}</span></div>
+    </div>`;
+  }).join('');
+}
+</script>
+</body>
+</html>
