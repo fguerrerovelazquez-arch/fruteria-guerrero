@@ -251,6 +251,7 @@ input:focus,select:focus{outline:2px solid #45566B;border-color:#45566B;}
       <button class="btn btn-ghost" onclick="imprimirTicket()" id="btnPrint">🖨️ Imprimir</button>
       <button class="btn btn-green" onclick="abrirModalCobro()" id="btnCerrar">💰 Registrar cobro y cerrar</button>
       <button class="btn btn-outline" onclick="reabrirPedido()" id="btnReabrir" style="display:none;">🔓 Reabrir pedido</button>
+      <button class="btn btn-red" onclick="cancelarPedido()" id="btnCancelarDetalle" style="display:none;">Cancelar pedido</button>
     </div>
   </div>
 
@@ -855,7 +856,8 @@ function renderPedidosDia(){
         <button class="btn btn-red btn-small" onclick="cancelarPedido('${id}')">Cancelar pedido</button>`;
     } else if(p.estado==='COMPLETADO'){
       actionBtn=`<button class="btn btn-outline btn-small" onclick="abrirEditar('${id}')" style="margin-bottom:6px;">Editar pedido</button>
-        <button class="btn btn-primary btn-small" style="width:auto;" onclick="verDetalle('${id}')">Revisar y enviar</button>`;
+        <button class="btn btn-primary btn-small" style="width:auto;margin-bottom:6px;" onclick="verDetalle('${id}')">Revisar y enviar</button>
+        <button class="btn btn-red btn-small" onclick="cancelarPedido('${id}')">Cancelar pedido</button>`;
     } else if(p.estado==='CERRADO'){
       actionBtn=`<button class="btn btn-ghost btn-small" onclick="verDetalle('${id}')" style="margin-bottom:6px;">Ver nota</button>
         <button class="btn btn-outline btn-small" onclick="reabrirPedido('${id}')">Reabrir pedido</button>`;
@@ -947,14 +949,17 @@ function renderDetalle(id){
   const actions=document.getElementById('sendActions');
   const btnCerrar=document.getElementById('btnCerrar');
   const btnReabrir=document.getElementById('btnReabrir');
+  const btnCancelarDetalle=document.getElementById('btnCancelarDetalle');
   if(p.estado==='COMPLETADO'){
     actions.style.display='flex';
     btnCerrar.style.display='block';
     btnReabrir.style.display='none';
+    btnCancelarDetalle.style.display='block';
   } else if(p.estado==='CERRADO'){
     actions.style.display='flex';
     btnCerrar.style.display='none';
     btnReabrir.style.display='block';
+    btnCancelarDetalle.style.display='none';
   } else {
     actions.style.display='none';
   }
@@ -1174,8 +1179,9 @@ window.cerrarConPago=async function(tipo){
 /* ============ CANCELAR PEDIDO ============ */
 let cancelPedidoId=null;
 window.cancelarPedido=function(id){
-  const p=pedidosDB[id];if(!p)return;
-  cancelPedidoId=id;
+  const pid=id||detallePedidoId;
+  const p=pedidosDB[pid];if(!p)return;
+  cancelPedidoId=pid;
   document.getElementById('cancelInfo').innerHTML=`<b>${esc(p.cliente)}</b> — Folio #${p.folio}`;
   document.getElementById('motivoCancelacion').value='';
   document.getElementById('modalCancelar').classList.add('open');
