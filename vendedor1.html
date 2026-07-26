@@ -158,12 +158,12 @@ input:focus,select:focus{outline:2px solid #45566B;border-color:#45566B;}
     <div style="font-size:48px;margin-bottom:10px;">🍉</div>
     <div style="color:#fff;font-size:22px;font-weight:500;margin-bottom:4px;">Frutería Guerrero</div>
     <div style="color:#9CA6AF;font-size:14px;margin-bottom:30px;">Nota de pedido — Acceso restringido</div>
-    <input type="email" id="loginEmail" placeholder="Correo" autocomplete="username" style="font-size:18px;padding:14px 18px;border-radius:10px;border:none;width:240px;text-align:center;font-family:inherit;background:#fff;color:#22262B;display:block;margin:0 auto 10px;">
+    <input type="text" id="loginNombre" placeholder="Nombre" autocomplete="username" style="font-size:18px;padding:14px 18px;border-radius:10px;border:none;width:240px;text-align:center;font-family:inherit;background:#fff;color:#22262B;display:block;margin:0 auto 10px;">
     <input type="password" id="loginPass" placeholder="Contraseña" autocomplete="current-password" style="font-size:18px;padding:14px 18px;border-radius:10px;border:none;width:240px;text-align:center;font-family:inherit;background:#fff;color:#22262B;display:block;margin:0 auto;">
     <div style="margin-top:14px;">
       <button id="btnLogin" style="font-size:17px;font-weight:600;padding:12px 30px;border-radius:10px;border:none;background:#45566B;color:#fff;cursor:pointer;font-family:inherit;">Entrar</button>
     </div>
-    <div id="loginError" style="color:#E57373;font-size:14px;margin-top:12px;display:none;">Correo o contraseña incorrectos</div>
+    <div id="loginError" style="color:#E57373;font-size:14px;margin-top:12px;display:none;">Nombre o contraseña incorrectos</div>
   </div>
 </div>
 
@@ -450,20 +450,29 @@ function fmt(n){
 }
 
 /* ============ AUTENTICACIÓN ============ */
+/* Firebase Auth exige un correo, así que el "nombre" que teclea el
+   vendedor se traduce a un correo interno fijo (nunca se muestra). */
+function nombreAEmail(nombre){
+  const limpio=nombre.trim().toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/[^a-z0-9]+/g,'.')
+    .replace(/^\.+|\.+$/g,'');
+  return limpio+'@fruteriaguerrero.local';
+}
 async function iniciarSesion(){
-  const email=document.getElementById('loginEmail').value.trim();
+  const nombre=document.getElementById('loginNombre').value.trim();
   const pass=document.getElementById('loginPass').value;
   const err=document.getElementById('loginError');
   err.style.display='none';
   try{
-    await signInWithEmailAndPassword(auth,email,pass);
+    await signInWithEmailAndPassword(auth,nombreAEmail(nombre),pass);
   }catch(e){
     err.style.display='block';
   }
 }
 document.getElementById('btnLogin').addEventListener('click',iniciarSesion);
 document.getElementById('loginPass').addEventListener('keydown',e=>{if(e.key==='Enter')iniciarSesion();});
-document.getElementById('loginEmail').addEventListener('keydown',e=>{if(e.key==='Enter')iniciarSesion();});
+document.getElementById('loginNombre').addEventListener('keydown',e=>{if(e.key==='Enter')iniciarSesion();});
 document.getElementById('btnLogout').addEventListener('click',()=>signOut(auth));
 onAuthStateChanged(auth,user=>{
   document.getElementById('loginScreen').style.display=user?'none':'flex';

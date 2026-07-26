@@ -71,12 +71,11 @@ body{background:#EFEEE9;color:#22262B;font-family:-apple-system,BlinkMacSystemFo
     <div style="font-size:48px;margin-bottom:10px;">🍉</div>
     <div style="color:#fff;font-size:22px;font-weight:500;margin-bottom:4px;">Frutería Guerrero</div>
     <div style="color:#9CA6AF;font-size:14px;margin-bottom:30px;">Nota de preparación — Acceso restringido</div>
-    <input type="email" id="loginEmail" placeholder="Correo" autocomplete="username" style="font-size:18px;padding:14px 18px;border-radius:10px;border:none;width:240px;text-align:center;font-family:inherit;background:#fff;color:#22262B;display:block;margin:0 auto 10px;">
     <input type="password" id="loginPass" placeholder="Contraseña" autocomplete="current-password" style="font-size:18px;padding:14px 18px;border-radius:10px;border:none;width:240px;text-align:center;font-family:inherit;background:#fff;color:#22262B;display:block;margin:0 auto;">
     <div style="margin-top:14px;">
       <button id="btnLogin" style="font-size:17px;font-weight:600;padding:12px 30px;border-radius:10px;border:none;background:#45566B;color:#fff;cursor:pointer;font-family:inherit;">Entrar</button>
     </div>
-    <div id="loginError" style="color:#E57373;font-size:14px;margin-top:12px;display:none;">Correo o contraseña incorrectos</div>
+    <div id="loginError" style="color:#E57373;font-size:14px;margin-top:12px;display:none;">Contraseña incorrecta</div>
   </div>
 </div>
 
@@ -142,20 +141,21 @@ function esc(s){
 }
 
 /* ============ AUTENTICACIÓN ============ */
+/* Un solo correo interno fijo compartido — el vendedor2 solo teclea
+   la contraseña, sin usuario visible. */
+const CORREO_VENDEDOR2='vendedor2@fruteriaguerrero.local';
 async function iniciarSesion(){
-  const email=document.getElementById('loginEmail').value.trim();
   const pass=document.getElementById('loginPass').value;
   const err=document.getElementById('loginError');
   err.style.display='none';
   try{
-    await signInWithEmailAndPassword(auth,email,pass);
+    await signInWithEmailAndPassword(auth,CORREO_VENDEDOR2,pass);
   }catch(e){
     err.style.display='block';
   }
 }
 document.getElementById('btnLogin').addEventListener('click',iniciarSesion);
 document.getElementById('loginPass').addEventListener('keydown',e=>{if(e.key==='Enter')iniciarSesion();});
-document.getElementById('loginEmail').addEventListener('keydown',e=>{if(e.key==='Enter')iniciarSesion();});
 document.getElementById('btnLogout').addEventListener('click',()=>signOut(auth));
 onAuthStateChanged(auth,user=>{
   document.getElementById('loginScreen').style.display=user?'none':'flex';
