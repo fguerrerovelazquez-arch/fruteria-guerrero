@@ -338,6 +338,12 @@ input:focus,select:focus{outline:2px solid #45566B;border-color:#45566B;}
     <h3>Nuevo producto</h3>
     <input type="text" id="nuevoProdNombre" placeholder="Nombre del producto">
     <input type="number" id="nuevoProdPrecio" placeholder="Precio por kg" step="0.5" min="0">
+    <select id="nuevoProdUnidad" style="margin-bottom:14px;">
+      <option value="kg">kg</option>
+      <option value="caja">caja</option>
+      <option value="saco">saco</option>
+      <option value="pza">pza</option>
+    </select>
     <div class="modal-btns">
       <button class="btn btn-ghost" onclick="cerrarModalProducto()">Cancelar</button>
       <button class="btn btn-primary" style="width:auto;padding:10px 20px;" onclick="guardarProducto()" id="btnGuardarProducto">Guardar y agregar</button>
@@ -351,6 +357,12 @@ input:focus,select:focus{outline:2px solid #45566B;border-color:#45566B;}
     <h3>Editar producto</h3>
     <input type="text" id="editProdNombre" placeholder="Nombre del producto">
     <input type="number" id="editProdPrecio" placeholder="Precio por kg" step="0.5" min="0">
+    <select id="editProdUnidad" style="margin-bottom:14px;">
+      <option value="kg">kg</option>
+      <option value="caja">caja</option>
+      <option value="saco">saco</option>
+      <option value="pza">pza</option>
+    </select>
     <div class="modal-btns">
       <button class="btn btn-ghost" onclick="cerrarModalEditarProducto()">Cancelar</button>
       <button class="btn btn-primary" style="width:auto;padding:10px 20px;" onclick="guardarEdicionProducto()">Guardar</button>
@@ -670,7 +682,7 @@ window.addProductoIdx=function(idx){
   const p=PRODUCTOS[idx];
   if(!p)return;
   const precioDia=obtenerPrecioDia(p.nombre);
-  pedido.push({nombre:p.nombre,precio:precioDia||p.precio,pedido:1,unidad:'kg'});
+  pedido.push({nombre:p.nombre,precio:precioDia||p.precio,pedido:1,unidad:p.unidad||'kg'});
   document.getElementById('buscarProd').value='';
   document.getElementById('prodList').classList.remove('open');
   renderTabla();
@@ -682,6 +694,7 @@ window.abrirModalProducto=function(origen){
   modalProductoOrigen=origen||'pedido';
   document.getElementById('nuevoProdNombre').value='';
   document.getElementById('nuevoProdPrecio').value='';
+  document.getElementById('nuevoProdUnidad').value='kg';
   document.getElementById('btnGuardarProducto').textContent=modalProductoOrigen==='pedido'?'Guardar y agregar':'Guardar';
   document.getElementById('modalProducto').classList.add('open');
   setTimeout(()=>document.getElementById('nuevoProdNombre').focus(),100);
@@ -690,13 +703,14 @@ window.cerrarModalProducto=function(){document.getElementById('modalProducto').c
 window.guardarProducto=function(){
   const nombre=document.getElementById('nuevoProdNombre').value.trim();
   const precio=parseFloat(document.getElementById('nuevoProdPrecio').value)||0;
+  const unidad=document.getElementById('nuevoProdUnidad').value;
   if(!nombre){alert('Escribe el nombre del producto.');return;}
   if(precio<=0){alert('Pon un precio válido.');return;}
   if(PRODUCTOS.some(p=>p.nombre.toLowerCase()===nombre.toLowerCase())){alert('Ya existe un producto con ese nombre en el catálogo.');return;}
-  push(ref(db,'productos'),{nombre,precio});
+  push(ref(db,'productos'),{nombre,precio,unidad});
   if(modalProductoOrigen==='pedido'){
     guardarPrecioDia(nombre,precio);
-    pedido.push({nombre,precio,pedido:1,unidad:'kg'});
+    pedido.push({nombre,precio,pedido:1,unidad});
     renderTabla();
   }
   cerrarModalProducto();
@@ -712,7 +726,7 @@ window.renderCatalogo=function(){
   cont.innerHTML=lista.map(p=>`<div class="ocard">
       <div class="ocard-left">
         <div class="ocard-cliente">${esc(p.nombre)}</div>
-        <div class="ocard-hora">$${p.precio.toFixed(2)} / kg (precio base)</div>
+        <div class="ocard-hora">$${p.precio.toFixed(2)} / ${p.unidad||'kg'} (precio base)</div>
       </div>
       <div class="ocard-right">
         <button class="btn btn-outline btn-small" style="margin-bottom:6px;" onclick="abrirEditarProducto('${p.id}')">Editar</button>
@@ -726,6 +740,7 @@ window.abrirEditarProducto=function(id){
   document.getElementById('editProdNombre').value=p.nombre;
   document.getElementById('editProdNombre').dataset.id=id;
   document.getElementById('editProdPrecio').value=p.precio;
+  document.getElementById('editProdUnidad').value=p.unidad||'kg';
   document.getElementById('modalEditarProducto').classList.add('open');
 };
 window.cerrarModalEditarProducto=function(){document.getElementById('modalEditarProducto').classList.remove('open');};
@@ -733,10 +748,11 @@ window.guardarEdicionProducto=async function(){
   const id=document.getElementById('editProdNombre').dataset.id;
   const nombre=document.getElementById('editProdNombre').value.trim();
   const precio=parseFloat(document.getElementById('editProdPrecio').value)||0;
+  const unidad=document.getElementById('editProdUnidad').value;
   if(!nombre){alert('Escribe el nombre del producto.');return;}
   if(precio<=0){alert('Pon un precio válido.');return;}
   if(PRODUCTOS.some(p=>p.id!==id&&p.nombre.toLowerCase()===nombre.toLowerCase())){alert('Ya existe otro producto con ese nombre.');return;}
-  await update(ref(db,'productos/'+id),{nombre,precio});
+  await update(ref(db,'productos/'+id),{nombre,precio,unidad});
   cerrarModalEditarProducto();
   alert('✅ Producto actualizado.');
 };
@@ -1503,7 +1519,7 @@ window.addProductoEditIdx=function(idx){
   const p=PRODUCTOS[idx];
   if(!p)return;
   const precioDia=obtenerPrecioDia(p.nombre);
-  editProductos.push({nombre:p.nombre,pedido:1,surtido:null,precio:precioDia||p.precio,unidad:'kg'});
+  editProductos.push({nombre:p.nombre,pedido:1,surtido:null,precio:precioDia||p.precio,unidad:p.unidad||'kg'});
   document.getElementById('buscarProdEdit').value='';
   document.getElementById('prodListEdit').classList.remove('open');
   renderEditContenido();
