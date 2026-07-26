@@ -71,7 +71,7 @@ body{background:#EFEEE9;color:#22262B;font-family:-apple-system,BlinkMacSystemFo
     <div style="font-size:48px;margin-bottom:10px;">🍉</div>
     <div style="color:#fff;font-size:22px;font-weight:500;margin-bottom:4px;">Frutería Guerrero</div>
     <div style="color:#9CA6AF;font-size:14px;margin-bottom:30px;">Nota de preparación — Acceso restringido</div>
-    <input type="password" id="loginPass" placeholder="Contraseña" autocomplete="current-password" style="font-size:18px;padding:14px 18px;border-radius:10px;border:none;width:240px;text-align:center;font-family:inherit;background:#fff;color:#22262B;display:block;margin:0 auto;">
+    <input type="text" id="loginPass" placeholder="Contraseña" autocomplete="current-password" style="font-size:18px;padding:14px 18px;border-radius:10px;border:none;width:240px;text-align:center;font-family:inherit;background:#fff;color:#22262B;display:block;margin:0 auto;">
     <div style="margin-top:14px;">
       <button id="btnLogin" style="font-size:17px;font-weight:600;padding:12px 30px;border-radius:10px;border:none;background:#45566B;color:#fff;cursor:pointer;font-family:inherit;">Entrar</button>
     </div>
@@ -157,9 +157,30 @@ async function iniciarSesion(){
 document.getElementById('btnLogin').addEventListener('click',iniciarSesion);
 document.getElementById('loginPass').addEventListener('keydown',e=>{if(e.key==='Enter')iniciarSesion();});
 document.getElementById('btnLogout').addEventListener('click',()=>signOut(auth));
+
+/* El "escucha" de Firebase se registra hasta que el login se
+   confirma — registrarlo antes choca con las reglas (auth != null)
+   y se queda sin datos hasta refrescar la página. */
+let listenersActivos=false;
+function iniciarListeners(){
+  if(listenersActivos)return;
+  listenersActivos=true;
+  onValue(ref(db,'pedidos'),snap=>{
+    pedidosDB=snap.val()||{};
+    updateCounts();
+    const activePage=document.querySelector('.page.active');
+    if(activePage.id==='pageNuevo') renderNuevos();
+    else if(activePage.id==='pagePrep') renderPrep();
+    else if(activePage.id==='pageCompletados') renderCompletados();
+  });
+}
+
 onAuthStateChanged(auth,user=>{
   document.getElementById('loginScreen').style.display=user?'none':'flex';
-  if(user) showPage('nuevo');
+  if(user){
+    showPage('nuevo');
+    iniciarListeners();
+  }
 });
 
 let pedidosDB = {};
@@ -182,17 +203,6 @@ window.showPage=function(p){
   else if(p==='prep'){document.getElementById('pagePrep').classList.add('active');tabs[1].classList.add('active');renderPrep();}
   else if(p==='completados'){document.getElementById('pageCompletados').classList.add('active');tabs[2].classList.add('active');renderCompletados();}
 };
-
-/* ============ LISTENER ============ */
-onValue(ref(db,'pedidos'),snap=>{
-  pedidosDB=snap.val()||{};
-  updateCounts();
-  // refresh current page
-  const activePage=document.querySelector('.page.active');
-  if(activePage.id==='pageNuevo') renderNuevos();
-  else if(activePage.id==='pagePrep') renderPrep();
-  else if(activePage.id==='pageCompletados') renderCompletados();
-});
 
 function updateCounts(){
   const hoy=hoyISO();

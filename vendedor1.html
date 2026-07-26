@@ -159,7 +159,7 @@ input:focus,select:focus{outline:2px solid #45566B;border-color:#45566B;}
     <div style="color:#fff;font-size:22px;font-weight:500;margin-bottom:4px;">Frutería Guerrero</div>
     <div style="color:#9CA6AF;font-size:14px;margin-bottom:30px;">Nota de pedido — Acceso restringido</div>
     <input type="text" id="loginNombre" placeholder="Nombre" autocomplete="username" style="font-size:18px;padding:14px 18px;border-radius:10px;border:none;width:240px;text-align:center;font-family:inherit;background:#fff;color:#22262B;display:block;margin:0 auto 10px;">
-    <input type="password" id="loginPass" placeholder="Contraseña" autocomplete="current-password" style="font-size:18px;padding:14px 18px;border-radius:10px;border:none;width:240px;text-align:center;font-family:inherit;background:#fff;color:#22262B;display:block;margin:0 auto;">
+    <input type="text" id="loginPass" placeholder="Contraseña" autocomplete="current-password" style="font-size:18px;padding:14px 18px;border-radius:10px;border:none;width:240px;text-align:center;font-family:inherit;background:#fff;color:#22262B;display:block;margin:0 auto;">
     <div style="margin-top:14px;">
       <button id="btnLogin" style="font-size:17px;font-weight:600;padding:12px 30px;border-radius:10px;border:none;background:#45566B;color:#fff;cursor:pointer;font-family:inherit;">Entrar</button>
     </div>
@@ -474,9 +474,55 @@ document.getElementById('btnLogin').addEventListener('click',iniciarSesion);
 document.getElementById('loginPass').addEventListener('keydown',e=>{if(e.key==='Enter')iniciarSesion();});
 document.getElementById('loginNombre').addEventListener('keydown',e=>{if(e.key==='Enter')iniciarSesion();});
 document.getElementById('btnLogout').addEventListener('click',()=>signOut(auth));
+
+/* Los "escuchas" de Firebase se registran hasta que el login se
+   confirma — registrarlos antes choca con las reglas (auth != null)
+   y se quedan sin datos hasta refrescar la página. */
+let listenersActivos=false;
+function iniciarListeners(){
+  if(listenersActivos)return;
+  listenersActivos=true;
+
+  onValue(ref(db,'precios_dia/'+hoyISO()),snap=>{
+    preciosDia=snap.val()||{};
+  });
+
+  onValue(ref(db,'clientes'),snap=>{
+    const data=snap.val()||{};
+    clientes=Object.entries(data).map(([k,v])=>({id:k,...v}));
+  });
+
+  onValue(ref(db,'productos'),async snap=>{
+    const data=snap.val();
+    if(!data){
+      if(productosSembrados)return;
+      productosSembrados=true;
+      const seed={};
+      PRODUCTOS_SEED.forEach(p=>{seed[push(ref(db,'productos')).key]=p;});
+      await update(ref(db,'productos'),seed);
+      return;
+    }
+    PRODUCTOS=Object.entries(data).map(([id,v])=>({id,...v})).sort((a,b)=>a.nombre.localeCompare(b.nombre));
+    renderChips();
+    if(document.getElementById('pageCatalogo')?.classList.contains('active')) renderCatalogo();
+  });
+
+  onValue(ref(db,'pedidos'),snap=>{
+    pedidosDB=snap.val()||{};
+    updateCntDia();
+    if(document.getElementById('pageDia').classList.contains('active')) renderPedidosDia();
+    if(detallePedidoId && pedidosDB[detallePedidoId]){
+      renderDetalle(detallePedidoId);
+    }
+  });
+}
+
 onAuthStateChanged(auth,user=>{
   document.getElementById('loginScreen').style.display=user?'none':'flex';
-  if(user) showPage('nuevo');
+  if(user){
+    showPage('nuevo');
+    iniciarListeners();
+  }
 });
 
 /* ============ PRODUCTOS ============ */
@@ -563,9 +609,6 @@ window.irAHoy=function(){
 };
 
 /* ============ PRECIOS DEL DÍA ============ */
-onValue(ref(db,'precios_dia/'+hoyISO()),snap=>{
-  preciosDia=snap.val()||{};
-});
 function guardarPrecioDia(nombre,precio){
   if(precio>0){
     const key=nombre.replace(/[.#$/\[\]]/g,'_');
@@ -610,28 +653,7 @@ window.showPage=function(p){
 };
 
 /* ============ CLIENTES ============ */
-onValue(ref(db,'clientes'),snap=>{
-  const data=snap.val()||{};
-  clientes=Object.entries(data).map(([k,v])=>({id:k,...v}));
-});
-
-/* ============ CATÁLOGO DE PRODUCTOS (Firebase) ============ */
 let productosSembrados=false;
-onValue(ref(db,'productos'),async snap=>{
-  const data=snap.val();
-  if(!data){
-    if(productosSembrados)return;
-    productosSembrados=true;
-    const seed={};
-    PRODUCTOS_SEED.forEach(p=>{seed[push(ref(db,'productos')).key]=p;});
-    await update(ref(db,'productos'),seed);
-    return;
-  }
-  PRODUCTOS=Object.entries(data).map(([id,v])=>({id,...v})).sort((a,b)=>a.nombre.localeCompare(b.nombre));
-  renderChips();
-  if(document.getElementById('pageCatalogo')?.classList.contains('active')) renderCatalogo();
-});
-
 let ultimoResCliente=[];
 window.buscarCliente=function(){
   const q=document.getElementById('clienteInput').value.trim().toLowerCase();
@@ -837,16 +859,6 @@ window.enviarPedido=async function(){
 };
 
 /* ============ PEDIDOS DEL DÍA ============ */
-onValue(ref(db,'pedidos'),snap=>{
-  pedidosDB=snap.val()||{};
-  updateCntDia();
-  if(document.getElementById('pageDia').classList.contains('active')) renderPedidosDia();
-  // update detalle if open
-  if(detallePedidoId && pedidosDB[detallePedidoId]){
-    renderDetalle(detallePedidoId);
-  }
-});
-
 function updateCntDia(){
   const hoy=hoyISO();
   const pedidosHoy=Object.values(pedidosDB).filter(p=>p.fecha===hoy);
