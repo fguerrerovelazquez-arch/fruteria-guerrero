@@ -444,6 +444,11 @@ function esc(s){
   return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 
+/* ============ FORMATO DE PESOS (miles con coma) ============ */
+function fmt(n){
+  return (n||0).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+
 /* ============ AUTENTICACIÓN ============ */
 async function iniciarSesion(){
   const email=document.getElementById('loginEmail').value.trim();
@@ -726,7 +731,7 @@ window.renderCatalogo=function(){
   cont.innerHTML=lista.map(p=>`<div class="ocard">
       <div class="ocard-left">
         <div class="ocard-cliente">${esc(p.nombre)}</div>
-        <div class="ocard-hora">$${p.precio.toFixed(2)} / ${p.unidad||'kg'} (precio base)</div>
+        <div class="ocard-hora">$${fmt(p.precio)} / ${p.unidad||'kg'} (precio base)</div>
       </div>
       <div class="ocard-right">
         <button class="btn btn-outline btn-small" style="margin-bottom:6px;" onclick="abrirEditarProducto('${p.id}')">Editar</button>
@@ -865,7 +870,7 @@ function renderPedidosDia(){
   document.getElementById('listaPedidos').innerHTML=filtered.map(([id,p])=>{
     const estadoClass={'NUEVO':'estado-nuevo','EN_PREPARACION':'estado-prep','COMPLETADO':'estado-comp','CERRADO':'estado-cerr','CANCELADO':'estado-canc'}[p.estado]||'estado-cerr';
     const estadoLabel={'NUEVO':'NUEVO','EN_PREPARACION':'EN PREPARACIÓN','COMPLETADO':'COMPLETADO','CERRADO':'CERRADO','CANCELADO':'CANCELADO'}[p.estado];
-    const total=p.total?`$${p.total.toFixed(2)}`:'—';
+    const total=p.total?`$${fmt(p.total)}`:'—';
     let actionBtn='';
     if(p.estado==='NUEVO'||p.estado==='EN_PREPARACION'){
       actionBtn=`<button class="btn btn-outline btn-small" onclick="abrirEditar('${id}')" style="margin-bottom:6px;">Editar pedido</button>
@@ -890,7 +895,7 @@ function renderPedidosDia(){
       </div>
       <div class="ocard-center">
         <span class="estado ${estadoClass}">${estadoLabel}</span>
-        ${p.tipoPago?`<br><span class="pago-badge pago-${p.tipoPago}">${p.tipoPago==='pagado'?'✅ Pagado':p.tipoPago==='credito'?'📋 Crédito':'💵 Abono $'+(p.montoPagado||0).toFixed(2)}</span>`:''}
+        ${p.tipoPago?`<br><span class="pago-badge pago-${p.tipoPago}">${p.tipoPago==='pagado'?'✅ Pagado':p.tipoPago==='credito'?'📋 Crédito':'💵 Abono $'+fmt((p.montoPagado||0))}</span>`:''}
       </div>
       <div class="ocard-right">
         <div class="ocard-total-lbl">TOTAL</div>
@@ -921,7 +926,7 @@ function renderDetalle(id){
     const u=pr.unidad||'kg';
     let diff='';
     if(pr.surtido!==null&&pr.surtido!==pr.pedido) diff=`<div class="r2"><span>pedido: ${pr.pedido} ${u}</span></div>`;
-    return `<div class="titem"><div class="r1"><span>${esc(pr.nombre)}</span><span>$${importe.toFixed(2)}</span></div><div class="r2"><span>${surtido} ${u} x $${pr.precio.toFixed(2)}</span></div>${diff}</div>`;
+    return `<div class="titem"><div class="r1"><span>${esc(pr.nombre)}</span><span>$${fmt(importe)}</span></div><div class="r2"><span>${surtido} ${u} x $${fmt(pr.precio)}</span></div>${diff}</div>`;
   }).join('');
   const totalCalc=prods.reduce((s,pr)=>{const sur=pr.surtido!==null?pr.surtido:pr.pedido;return s+sur*pr.precio;},0);
 
@@ -957,7 +962,7 @@ function renderDetalle(id){
       <hr>
       ${items}
       <hr>
-      <div class="ttotal"><span>TOTAL</span><span>$${totalCalc.toFixed(2)}</span></div>
+      <div class="ttotal"><span>TOTAL</span><span>$${fmt(totalCalc)}</span></div>
       <div class="thanks">¡Gracias por su compra!</div>
       <div class="zig"></div>
     </div>`;
@@ -1057,12 +1062,12 @@ function dibujarTicketCanvas(){
     ctx.font=`bold 15px ${FONT}`;ctx.fillStyle='#1a1a1a';
     ctx.fillText(pr.nombre,PAD,y);
     ctx.textAlign='right';
-    ctx.fillText(`$${imp.toFixed(2)}`,W-PAD,y);
+    ctx.fillText(`$${fmt(imp)}`,W-PAD,y);
     y+=22;
 
     ctx.font=`normal 13px ${FONT}`;ctx.fillStyle='#555';ctx.textAlign='left';
     const u=pr.unidad||'kg';
-    ctx.fillText(`${sur} ${u} x $${pr.precio.toFixed(2)}`,PAD,y);
+    ctx.fillText(`${sur} ${u} x $${fmt(pr.precio)}`,PAD,y);
     y+=20;
 
     if(pr.surtido!==null&&pr.surtido!==pr.pedido){
@@ -1081,7 +1086,7 @@ function dibujarTicketCanvas(){
   const totalCalc=prods.reduce((s,pr)=>{const sur=pr.surtido!==null?pr.surtido:pr.pedido;return s+sur*pr.precio;},0);
   ctx.fillText('TOTAL',PAD,y);
   ctx.textAlign='right';
-  ctx.fillText(`$${totalCalc.toFixed(2)}`,W-PAD,y);y+=34;
+  ctx.fillText(`$${fmt(totalCalc)}`,W-PAD,y);y+=34;
 
   ctx.font=`italic 14px ${FONT}`;ctx.fillStyle='#555';ctx.textAlign='center';
   ctx.fillText('¡Gracias por su compra!',W/2,y);
@@ -1160,7 +1165,7 @@ window.imprimirTicket=function(){
 window.abrirModalCobro=function(){
   const p=pedidosDB[detallePedidoId];if(!p)return;
   const total=(p.productos||[]).reduce((s,pr)=>{const sur=pr.surtido!==null?pr.surtido:pr.pedido;return s+sur*pr.precio;},0);
-  document.getElementById('cobroInfo').innerHTML=`<b>${esc(p.cliente)}</b> — Folio #${p.folio}<br>Total: <b style="font-size:20px;">$${total.toFixed(2)}</b>`;
+  document.getElementById('cobroInfo').innerHTML=`<b>${esc(p.cliente)}</b> — Folio #${p.folio}<br>Total: <b style="font-size:20px;">$${fmt(total)}</b>`;
   document.getElementById('abonoSection').style.display='none';
   document.getElementById('montoAbono').value='';
   document.getElementById('modalCobro').classList.add('open');
@@ -1177,7 +1182,7 @@ window.cerrarConPago=async function(tipo){
   else if(tipo==='abono'){
     montoPagado=parseFloat(document.getElementById('montoAbono').value)||0;
     if(montoPagado<=0){alert('Escribe el monto del abono.');return;}
-    if(montoPagado>total){alert(`El abono no puede ser mayor al total de la nota ($${total.toFixed(2)}).`);return;}
+    if(montoPagado>total){alert(`El abono no puede ser mayor al total de la nota ($${fmt(total)}).`);return;}
     if(montoPagado===total){tipo='pagado';saldoPendiente=0;}
     else{saldoPendiente=total-montoPagado;}
   }
@@ -1187,7 +1192,7 @@ window.cerrarConPago=async function(tipo){
     'timestamps/cerrado':Date.now()
   });
   cerrarModalCobro();
-  const msg=tipo==='pagado'?'✅ Orden cerrada — Pagado':tipo==='credito'?'📋 Orden cerrada — A crédito':`💵 Orden cerrada — Abono de $${montoPagado.toFixed(2)}`;
+  const msg=tipo==='pagado'?'✅ Orden cerrada — Pagado':tipo==='credito'?'📋 Orden cerrada — A crédito':`💵 Orden cerrada — Abono de $${fmt(montoPagado)}`;
   alert(msg);
   showPage('dia');
 };
@@ -1268,9 +1273,9 @@ window.renderClientes=function(){
         <div class="ocard-hora">${b.pedidos} pedido${b.pedidos!==1?'s':''} cerrado${b.pedidos!==1?'s':''}</div>
       </div>
       <div class="ocard-right">
-        ${deuda?`<div class="ocard-total-lbl" style="color:#A63A2E;">DEBE</div><div class="ocard-total" style="color:#A63A2E;">$${b.saldoPendiente.toFixed(2)}</div>`
+        ${deuda?`<div class="ocard-total-lbl" style="color:#A63A2E;">DEBE</div><div class="ocard-total" style="color:#A63A2E;">$${fmt(b.saldoPendiente)}</div>`
         :`<div class="ocard-total-lbl">SALDO</div><div class="ocard-total val-green">$0.00</div>`}
-        <div class="ocard-hora" style="margin-top:4px;">Total vendido: $${b.totalVentas.toFixed(2)}</div>
+        <div class="ocard-hora" style="margin-top:4px;">Total vendido: $${fmt(b.totalVentas)}</div>
       </div>
     </div>`;
   }).join('');
@@ -1301,9 +1306,9 @@ function renderEdoCta(){
       </div>
     </div>
     <div class="edo-stats">
-      <div class="edo-stat"><div class="val val-blue">$${totalVentas.toFixed(2)}</div><div class="lbl">Total vendido</div></div>
-      <div class="edo-stat"><div class="val val-green">$${totalPagado.toFixed(2)}</div><div class="lbl">Total pagado</div></div>
-      <div class="edo-stat"><div class="val val-red">$${saldoPendiente.toFixed(2)}</div><div class="lbl">Saldo pendiente</div></div>
+      <div class="edo-stat"><div class="val val-blue">$${fmt(totalVentas)}</div><div class="lbl">Total vendido</div></div>
+      <div class="edo-stat"><div class="val val-green">$${fmt(totalPagado)}</div><div class="lbl">Total pagado</div></div>
+      <div class="edo-stat"><div class="val val-red">$${fmt(saldoPendiente)}</div><div class="lbl">Saldo pendiente</div></div>
     </div>
   </div>`;
 
@@ -1311,7 +1316,7 @@ function renderEdoCta(){
   if(pedidosCliente.length===0){html+='<div class="empty">Sin pedidos cerrados aún.</div>';}
   else{
     html+=pedidosCliente.map(([id,p])=>{
-      const tipoBadge=p.tipoPago?`<span class="pago-badge pago-${p.tipoPago}">${p.tipoPago==='pagado'?'Pagado':p.tipoPago==='credito'?'Crédito':'Abono $'+(p.montoPagado||0).toFixed(2)}</span>`:'';
+      const tipoBadge=p.tipoPago?`<span class="pago-badge pago-${p.tipoPago}">${p.tipoPago==='pagado'?'Pagado':p.tipoPago==='credito'?'Crédito':'Abono $'+fmt((p.montoPagado||0))}</span>`:'';
       const puedeAbonar=p.saldoPendiente>0;
       return `<div class="ocard">
         <div class="ocard-left">
@@ -1321,8 +1326,8 @@ function renderEdoCta(){
         </div>
         <div class="ocard-right">
           <div class="ocard-total-lbl">TOTAL</div>
-          <div class="ocard-total">$${(p.total||0).toFixed(2)}</div>
-          ${puedeAbonar?`<div style="margin-top:6px;"><div style="font-size:12px;color:#A63A2E;font-weight:600;">Debe: $${p.saldoPendiente.toFixed(2)}</div><button class="btn btn-outline btn-small" style="margin-top:4px;" onclick="abrirAbonoEdoCta('${id}')">Registrar abono</button></div>`
+          <div class="ocard-total">$${fmt((p.total||0))}</div>
+          ${puedeAbonar?`<div style="margin-top:6px;"><div style="font-size:12px;color:#A63A2E;font-weight:600;">Debe: $${fmt(p.saldoPendiente)}</div><button class="btn btn-outline btn-small" style="margin-top:4px;" onclick="abrirAbonoEdoCta('${id}')">Registrar abono</button></div>`
           :`<div class="ocard-hora" style="margin-top:4px;color:#4B7057;">✅ Liquidado</div>`}
         </div>
       </div>`;
@@ -1385,7 +1390,7 @@ window.verTicketDesdeEdoCta=function(id){
 window.abrirAbonoEdoCta=function(id){
   abonoEdoPedidoId=id;
   const p=pedidosDB[id];
-  document.getElementById('abonoEdoInfo').innerHTML=`Folio #${p.folio} — Debe: <b>$${(p.saldoPendiente||0).toFixed(2)}</b>`;
+  document.getElementById('abonoEdoInfo').innerHTML=`Folio #${p.folio} — Debe: <b>$${fmt((p.saldoPendiente||0))}</b>`;
   document.getElementById('montoAbonoEdoCta').value='';
   document.getElementById('modalAbonoEdoCta').classList.add('open');
 };
@@ -1394,7 +1399,7 @@ window.guardarAbonoEdoCta=async function(){
   const monto=parseFloat(document.getElementById('montoAbonoEdoCta').value)||0;
   const saldo=p.saldoPendiente||0;
   if(monto<=0){alert('Escribe un monto válido.');return;}
-  if(monto>saldo){alert(`El abono no puede ser mayor al saldo de esta nota ($${saldo.toFixed(2)}).`);return;}
+  if(monto>saldo){alert(`El abono no puede ser mayor al saldo de esta nota ($${fmt(saldo)}).`);return;}
   const nuevoMontoPagado=(p.montoPagado||0)+monto;
   let nuevoSaldo=saldo-monto;
   let nuevoTipo=p.tipoPago;
@@ -1402,7 +1407,7 @@ window.guardarAbonoEdoCta=async function(){
   const pagos=[...(p.pagos||[]),{fecha:hoyISO(),hora:horaActual(),monto,tipo:'abono'}];
   await update(ref(db,'pedidos/'+abonoEdoPedidoId),{montoPagado:nuevoMontoPagado,saldoPendiente:nuevoSaldo,tipoPago:nuevoTipo,pagos});
   document.getElementById('modalAbonoEdoCta').classList.remove('open');
-  alert(`✅ Abono de $${monto.toFixed(2)} registrado.`);
+  alert(`✅ Abono de $${fmt(monto)} registrado.`);
   renderEdoCta();
 };
 
@@ -1424,11 +1429,11 @@ function renderResumen(){
     <div class="resumen-cards">
       <div class="rcard"><div class="rv">${pedidosHoy.length}</div><div class="rl">Pedidos totales</div></div>
       <div class="rcard"><div class="rv">${cerrados.length}</div><div class="rl">Cerrados</div></div>
-      <div class="rcard"><div class="rv" style="color:#2C5A7A;">$${totalVendido.toFixed(2)}</div><div class="rl">Total vendido</div></div>
+      <div class="rcard"><div class="rv" style="color:#2C5A7A;">$${fmt(totalVendido)}</div><div class="rl">Total vendido</div></div>
     </div>
     <div class="resumen-cards">
-      <div class="rcard"><div class="rv val-green">$${totalCobrado.toFixed(2)}</div><div class="rl">Cobrado</div></div>
-      <div class="rcard"><div class="rv val-red">$${totalCredito.toFixed(2)}</div><div class="rl">En crédito</div></div>
+      <div class="rcard"><div class="rv val-green">$${fmt(totalCobrado)}</div><div class="rl">Cobrado</div></div>
+      <div class="rcard"><div class="rv val-red">$${fmt(totalCredito)}</div><div class="rl">En crédito</div></div>
       <div class="rcard"><div class="rv" style="color:#7A3232;">${cancelados.length}</div><div class="rl">Cancelados</div></div>
     </div>
     <div class="card" style="margin-top:6px;">
@@ -1453,7 +1458,7 @@ function renderResumen(){
     topClientes.forEach(([nombre,data])=>{
       html+=`<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px dashed #E1DFD8;font-size:15px;">
         <span><b>${esc(nombre)}</b> · ${data.pedidos} pedido${data.pedidos>1?'s':''}</span>
-        <span style="font-weight:700;">$${data.total.toFixed(2)}</span>
+        <span style="font-weight:700;">$${fmt(data.total)}</span>
       </div>`;
     });
     html+=`</div>`;
