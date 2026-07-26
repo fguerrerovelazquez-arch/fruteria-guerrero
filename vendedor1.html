@@ -1150,7 +1150,8 @@ window.descargarPDF=async function(){
     const ticketWidthMM=80;
     const ratio=canvas.height/canvas.width;
     const ticketHeightMM=ticketWidthMM*ratio;
-    const pdf=new jsPDF({unit:'mm',format:[ticketWidthMM,ticketHeightMM]});
+    const orientation=ticketWidthMM>ticketHeightMM?'l':'p';
+    const pdf=new jsPDF({unit:'mm',orientation,format:[ticketWidthMM,ticketHeightMM]});
     pdf.addImage(imgData,'PNG',0,0,ticketWidthMM,ticketHeightMM);
     const p=pedidosDB[detallePedidoId];
     pdf.save(`Nota_${p.folio}_${p.cliente.replace(/\s+/g,'_')}.pdf`);
