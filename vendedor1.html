@@ -186,6 +186,7 @@ input:focus,select:focus{outline:2px solid #45566B;border-color:#45566B;}
     <button class="tab active" onclick="showPage('nuevo')">Nuevo pedido</button>
     <button class="tab" onclick="showPage('dia')" id="tabDia">Pedidos del día <span class="cnt" id="cntDia" style="display:none"></span></button>
     <button class="tab" onclick="showPage('clientes')">Clientes</button>
+    <button class="tab" onclick="showPage('catalogo')">Catálogo</button>
     <button class="tab" onclick="showPage('resumen')">Resumen</button>
   </div>
 
@@ -265,6 +266,17 @@ input:focus,select:focus{outline:2px solid #45566B;border-color:#45566B;}
     <div id="edoCtaContenido"></div>
   </div>
 
+  <!-- ==================== CATÁLOGO DE PRODUCTOS ==================== -->
+  <div class="page" id="pageCatalogo">
+    <div class="card" style="padding:12px 18px;">
+      <div style="display:flex;gap:10px;">
+        <input type="text" id="buscarProdCatalogo" placeholder="Buscar producto..." oninput="renderCatalogo()" style="flex:1;">
+        <button class="btn btn-outline btn-small" onclick="abrirModalProducto('catalogo')">+ Nuevo</button>
+      </div>
+    </div>
+    <div id="listaCatalogo"></div>
+  </div>
+
   <!-- ==================== RESUMEN DEL DIA ==================== -->
   <div class="page" id="pageResumen">
     <div id="resumenContenido"></div>
@@ -279,6 +291,18 @@ input:focus,select:focus{outline:2px solid #45566B;border-color:#45566B;}
     <div class="modal-btns">
       <button class="btn btn-ghost" onclick="cerrarModalCliente()">Cancelar</button>
       <button class="btn btn-primary" style="width:auto;padding:10px 20px;" onclick="guardarCliente()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL EDITAR CLIENTE -->
+<div class="modal-bg" id="modalEditarCliente">
+  <div class="modal">
+    <h3>Editar cliente</h3>
+    <input type="text" id="editClienteNombre" placeholder="Nombre del cliente">
+    <div class="modal-btns">
+      <button class="btn btn-ghost" onclick="cerrarModalEditarCliente()">Cancelar</button>
+      <button class="btn btn-primary" style="width:auto;padding:10px 20px;" onclick="guardarEdicionCliente()">Guardar</button>
     </div>
   </div>
 </div>
@@ -303,7 +327,20 @@ input:focus,select:focus{outline:2px solid #45566B;border-color:#45566B;}
     <input type="number" id="nuevoProdPrecio" placeholder="Precio por kg" step="0.5" min="0">
     <div class="modal-btns">
       <button class="btn btn-ghost" onclick="cerrarModalProducto()">Cancelar</button>
-      <button class="btn btn-primary" style="width:auto;padding:10px 20px;" onclick="guardarProducto()">Guardar y agregar</button>
+      <button class="btn btn-primary" style="width:auto;padding:10px 20px;" onclick="guardarProducto()" id="btnGuardarProducto">Guardar y agregar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL EDITAR PRODUCTO -->
+<div class="modal-bg" id="modalEditarProducto">
+  <div class="modal">
+    <h3>Editar producto</h3>
+    <input type="text" id="editProdNombre" placeholder="Nombre del producto">
+    <input type="number" id="editProdPrecio" placeholder="Precio por kg" step="0.5" min="0">
+    <div class="modal-btns">
+      <button class="btn btn-ghost" onclick="cerrarModalEditarProducto()">Cancelar</button>
+      <button class="btn btn-primary" style="width:auto;padding:10px 20px;" onclick="guardarEdicionProducto()">Guardar</button>
     </div>
   </div>
 </div>
@@ -403,7 +440,7 @@ onAuthStateChanged(auth,user=>{
 });
 
 /* ============ PRODUCTOS ============ */
-const PRODUCTOS=[
+const PRODUCTOS_SEED=[
 ["Aguacate",65],["Ajo",55],["Apio",18],["Betabel",16],["Brócoli",28],
 ["Calabaza",14],["Camote",18],["Cebolla Blanca",16],["Cebolla Morada",18],["Cebollita Mazo",10],
 ["Cereza",90],["Chayote",14],["Chile Verde",20],["Chile Serrano",24],["Chile Jalapeño",22],
@@ -420,6 +457,8 @@ const PRODUCTOS=[
 ["Tomate Saladette",20],["Tomate Bola",22],["Tomatillo",18],["Toronja Roja",16],
 ["Uva Roja",48],["Uva Verde",48],
 ].map(([nombre,precio])=>({nombre,precio}));
+
+let PRODUCTOS=[];
 
 const FRECUENTES=["Tomate Saladette","Aguacate","Cebolla Blanca","Limón","Papa Americana","Chile Serrano","Plátano","Cilantro","Naranja Valencia","Manzana Roja","Chile Jalapeño","Pepino Americano"];
 
@@ -483,9 +522,13 @@ window.showPage=function(p){
     renderClientes();
   } else if(p==='edocta'){
     document.getElementById('pageEdoCta').classList.add('active');
+  } else if(p==='catalogo'){
+    document.getElementById('pageCatalogo').classList.add('active');
+    tabs[3].classList.add('active');
+    renderCatalogo();
   } else if(p==='resumen'){
     document.getElementById('pageResumen').classList.add('active');
-    tabs[3].classList.add('active');
+    tabs[4].classList.add('active');
     renderResumen();
   }
 };
@@ -494,6 +537,23 @@ window.showPage=function(p){
 onValue(ref(db,'clientes'),snap=>{
   const data=snap.val()||{};
   clientes=Object.entries(data).map(([k,v])=>({id:k,...v}));
+});
+
+/* ============ CATÁLOGO DE PRODUCTOS (Firebase) ============ */
+let productosSembrados=false;
+onValue(ref(db,'productos'),async snap=>{
+  const data=snap.val();
+  if(!data){
+    if(productosSembrados)return;
+    productosSembrados=true;
+    const seed={};
+    PRODUCTOS_SEED.forEach(p=>{seed[push(ref(db,'productos')).key]=p;});
+    await update(ref(db,'productos'),seed);
+    return;
+  }
+  PRODUCTOS=Object.entries(data).map(([id,v])=>({id,...v})).sort((a,b)=>a.nombre.localeCompare(b.nombre));
+  renderChips();
+  if(document.getElementById('pageCatalogo')?.classList.contains('active')) renderCatalogo();
 });
 
 let ultimoResCliente=[];
@@ -543,10 +603,10 @@ function renderChips(){
   const cont=document.getElementById('chipsFrec');
   cont.innerHTML=FRECUENTES.map(nom=>{
     const idx=PRODUCTOS.findIndex(p=>p.nombre===nom);
+    if(idx===-1)return '';
     return `<div class="chip" onclick="addProductoIdx(${idx})">${esc(nom)}</div>`;
   }).join('');
 }
-renderChips();
 
 window.buscarProducto=function(){
   const q=document.getElementById('buscarProd').value.trim().toLowerCase();
@@ -568,9 +628,12 @@ window.addProductoIdx=function(idx){
 };
 
 /* ============ NUEVO PRODUCTO ============ */
-window.abrirModalProducto=function(){
+let modalProductoOrigen='pedido';
+window.abrirModalProducto=function(origen){
+  modalProductoOrigen=origen||'pedido';
   document.getElementById('nuevoProdNombre').value='';
   document.getElementById('nuevoProdPrecio').value='';
+  document.getElementById('btnGuardarProducto').textContent=modalProductoOrigen==='pedido'?'Guardar y agregar':'Guardar';
   document.getElementById('modalProducto').classList.add('open');
   setTimeout(()=>document.getElementById('nuevoProdNombre').focus(),100);
 };
@@ -580,11 +643,59 @@ window.guardarProducto=function(){
   const precio=parseFloat(document.getElementById('nuevoProdPrecio').value)||0;
   if(!nombre){alert('Escribe el nombre del producto.');return;}
   if(precio<=0){alert('Pon un precio válido.');return;}
-  PRODUCTOS.push({nombre,precio});
-  guardarPrecioDia(nombre,precio);
-  pedido.push({nombre,precio,pedido:1,unidad:'kg'});
+  if(PRODUCTOS.some(p=>p.nombre.toLowerCase()===nombre.toLowerCase())){alert('Ya existe un producto con ese nombre en el catálogo.');return;}
+  push(ref(db,'productos'),{nombre,precio});
+  if(modalProductoOrigen==='pedido'){
+    guardarPrecioDia(nombre,precio);
+    pedido.push({nombre,precio,pedido:1,unidad:'kg'});
+    renderTabla();
+  }
   cerrarModalProducto();
-  renderTabla();
+};
+
+/* ============ CATÁLOGO (editar/eliminar producto) ============ */
+window.renderCatalogo=function(){
+  const q=(document.getElementById('buscarProdCatalogo')?.value||'').trim().toLowerCase();
+  const cont=document.getElementById('listaCatalogo');
+  let lista=[...PRODUCTOS];
+  if(q) lista=lista.filter(p=>p.nombre.toLowerCase().includes(q));
+  if(lista.length===0){cont.innerHTML='<div class="empty">No hay productos que mostrar.</div>';return;}
+  cont.innerHTML=lista.map(p=>`<div class="ocard">
+      <div class="ocard-left">
+        <div class="ocard-cliente">${esc(p.nombre)}</div>
+        <div class="ocard-hora">$${p.precio.toFixed(2)} / kg (precio base)</div>
+      </div>
+      <div class="ocard-right">
+        <button class="btn btn-outline btn-small" style="margin-bottom:6px;" onclick="abrirEditarProducto('${p.id}')">Editar</button>
+        <button class="btn btn-red btn-small" onclick="eliminarProducto('${p.id}')">Eliminar</button>
+      </div>
+    </div>`).join('');
+};
+window.abrirEditarProducto=function(id){
+  const p=PRODUCTOS.find(x=>x.id===id);
+  if(!p)return;
+  document.getElementById('editProdNombre').value=p.nombre;
+  document.getElementById('editProdNombre').dataset.id=id;
+  document.getElementById('editProdPrecio').value=p.precio;
+  document.getElementById('modalEditarProducto').classList.add('open');
+};
+window.cerrarModalEditarProducto=function(){document.getElementById('modalEditarProducto').classList.remove('open');};
+window.guardarEdicionProducto=async function(){
+  const id=document.getElementById('editProdNombre').dataset.id;
+  const nombre=document.getElementById('editProdNombre').value.trim();
+  const precio=parseFloat(document.getElementById('editProdPrecio').value)||0;
+  if(!nombre){alert('Escribe el nombre del producto.');return;}
+  if(precio<=0){alert('Pon un precio válido.');return;}
+  if(PRODUCTOS.some(p=>p.id!==id&&p.nombre.toLowerCase()===nombre.toLowerCase())){alert('Ya existe otro producto con ese nombre.');return;}
+  await update(ref(db,'productos/'+id),{nombre,precio});
+  cerrarModalEditarProducto();
+  alert('✅ Producto actualizado.');
+};
+window.eliminarProducto=async function(id){
+  const p=PRODUCTOS.find(x=>x.id===id);
+  if(!p)return;
+  if(!confirm(`¿Eliminar "${p.nombre}" del catálogo? Los pedidos ya creados con este producto no se modifican.`))return;
+  await set(ref(db,'productos/'+id),null);
 };
 
 /* ============ TABLA PEDIDO ============ */
@@ -1111,7 +1222,13 @@ function renderEdoCta(){
   pedidosCliente.forEach(([,p])=>{totalVentas+=(p.total||0);totalPagado+=(p.montoPagado||0);saldoPendiente+=(p.saldoPendiente||0);});
 
   let html=`<div class="edo-header">
-    <div class="edo-nombre">${esc(nombre)}</div>
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;">
+      <div class="edo-nombre">${esc(nombre)}</div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-outline btn-small" onclick="abrirEditarCliente()">Editar nombre</button>
+        <button class="btn btn-red btn-small" onclick="eliminarClienteActual()">Eliminar</button>
+      </div>
+    </div>
     <div class="edo-stats">
       <div class="edo-stat"><div class="val val-blue">$${totalVentas.toFixed(2)}</div><div class="lbl">Total vendido</div></div>
       <div class="edo-stat"><div class="val val-green">$${totalPagado.toFixed(2)}</div><div class="lbl">Total pagado</div></div>
@@ -1142,6 +1259,43 @@ function renderEdoCta(){
   }
   document.getElementById('edoCtaContenido').innerHTML=html;
 }
+
+/* ============ EDITAR / ELIMINAR CLIENTE ============ */
+window.abrirEditarCliente=function(){
+  document.getElementById('editClienteNombre').value=edoCtaCliente;
+  document.getElementById('modalEditarCliente').classList.add('open');
+  setTimeout(()=>document.getElementById('editClienteNombre').focus(),100);
+};
+window.cerrarModalEditarCliente=function(){document.getElementById('modalEditarCliente').classList.remove('open');};
+window.guardarEdicionCliente=async function(){
+  const nuevoNombre=document.getElementById('editClienteNombre').value.trim();
+  if(!nuevoNombre)return;
+  const nombreAnterior=edoCtaCliente;
+  if(nuevoNombre===nombreAnterior){cerrarModalEditarCliente();return;}
+  const registro=clientes.find(c=>c.nombre===nombreAnterior);
+  const updates={};
+  if(registro) updates[`clientes/${registro.id}/nombre`]=nuevoNombre;
+  Object.entries(pedidosDB).forEach(([pid,p])=>{
+    if(p.cliente===nombreAnterior) updates[`pedidos/${pid}/cliente`]=nuevoNombre;
+  });
+  await update(ref(db),updates);
+  edoCtaCliente=nuevoNombre;
+  cerrarModalEditarCliente();
+  alert('✅ Cliente actualizado.');
+  renderEdoCta();
+};
+window.eliminarClienteActual=async function(){
+  const nombre=edoCtaCliente;
+  const registro=clientes.find(c=>c.nombre===nombre);
+  const tienePedidos=Object.values(pedidosDB).some(p=>p.cliente===nombre);
+  const msg=tienePedidos
+    ?`"${nombre}" tiene pedidos registrados. Se eliminará de la lista/buscador de clientes, pero su historial de pedidos y deuda seguirá visible aquí. ¿Continuar?`
+    :`¿Eliminar a "${nombre}"? Esta acción no se puede deshacer.`;
+  if(!confirm(msg))return;
+  if(registro) await set(ref(db,'clientes/'+registro.id),null);
+  alert(tienePedidos?'🗑️ Cliente eliminado de la lista (su historial se conserva).':'🗑️ Cliente eliminado.');
+  showPage('clientes');
+};
 
 /* ============ VER TICKET DESDE ESTADO DE CUENTA ============ */
 window.verTicketDesdeEdoCta=function(id){
