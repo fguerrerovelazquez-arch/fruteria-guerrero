@@ -159,6 +159,7 @@ document.getElementById('loginEmail').addEventListener('keydown',e=>{if(e.key===
 document.getElementById('btnLogout').addEventListener('click',()=>signOut(auth));
 onAuthStateChanged(auth,user=>{
   document.getElementById('loginScreen').style.display=user?'none':'flex';
+  if(user) showPage('nuevo');
 });
 
 let pedidosDB = {};
