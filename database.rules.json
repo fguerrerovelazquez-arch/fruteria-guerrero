@@ -1,6 +1,6 @@
 {
   "rules": {
-    ".read": "auth != null",
-    ".write": "auth != null"
+    ".read": "auth != null && (auth.uid === 'L1VsXldbKnRw64GRnHbCMM4m5mo1' || auth.uid === 'V54aIKZgHERKDZrCVfBgBcMRRqB3' || auth.uid === '9RchhubYu8dCT4NKAM7aVL8nbxS2')",
+    ".write": "auth != null && (auth.uid === 'L1VsXldbKnRw64GRnHbCMM4m5mo1' || auth.uid === 'V54aIKZgHERKDZrCVfBgBcMRRqB3' || auth.uid === '9RchhubYu8dCT4NKAM7aVL8nbxS2')"
   }
 }
