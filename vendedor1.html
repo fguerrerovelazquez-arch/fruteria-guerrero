@@ -159,7 +159,7 @@ input:focus,select:focus{outline:2px solid #45566B;border-color:#45566B;}
     <div style="color:#fff;font-size:22px;font-weight:500;margin-bottom:4px;">Frutería Guerrero</div>
     <div style="color:#9CA6AF;font-size:14px;margin-bottom:30px;">Nota de pedido — Acceso restringido</div>
     <input type="text" id="loginNombre" placeholder="Nombre" autocomplete="username" style="font-size:18px;padding:14px 18px;border-radius:10px;border:none;width:240px;text-align:center;font-family:inherit;background:#fff;color:#22262B;display:block;margin:0 auto 10px;">
-    <input type="text" id="loginPass" placeholder="Contraseña" autocomplete="current-password" style="font-size:18px;padding:14px 18px;border-radius:10px;border:none;width:240px;text-align:center;font-family:inherit;background:#fff;color:#22262B;display:block;margin:0 auto;">
+    <input type="password" id="loginPass" placeholder="Contraseña" autocomplete="current-password" style="font-size:18px;padding:14px 18px;border-radius:10px;border:none;width:240px;text-align:center;font-family:inherit;background:#fff;color:#22262B;display:block;margin:0 auto;">
     <div style="margin-top:14px;">
       <button id="btnLogin" style="font-size:17px;font-weight:600;padding:12px 30px;border-radius:10px;border:none;background:#45566B;color:#fff;cursor:pointer;font-family:inherit;">Entrar</button>
     </div>
@@ -517,11 +517,25 @@ function iniciarListeners(){
   });
 }
 
+/* Si refrescas la página sin sesión activa, regresa al portal en vez
+   de quedarte viendo la pantalla de acceso restringido aquí. Si en
+   cambio llegaste por primera vez (clic desde el portal), sí se
+   muestra el login normalmente. */
+function esRecarga(){
+  try{
+    const nav=performance.getEntriesByType('navigation')[0];
+    if(nav) return nav.type==='reload';
+  }catch(e){}
+  return !!(performance.navigation && performance.navigation.type===1);
+}
+
 onAuthStateChanged(auth,user=>{
   document.getElementById('loginScreen').style.display=user?'none':'flex';
   if(user){
     showPage('nuevo');
     iniciarListeners();
+  } else if(esRecarga()){
+    location.replace('/');
   }
 });
 
