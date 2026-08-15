@@ -156,7 +156,7 @@ async function iniciarSesion(){
 }
 document.getElementById('btnLogin').addEventListener('click',iniciarSesion);
 document.getElementById('loginPass').addEventListener('keydown',e=>{if(e.key==='Enter')iniciarSesion();});
-document.getElementById('btnLogout').addEventListener('click',()=>signOut(auth));
+document.getElementById('btnLogout').addEventListener('click',()=>signOut(auth).then(()=>location.replace('/')));
 
 /* El "escucha" de Firebase se registra hasta que el login se
    confirma — registrarlo antes choca con las reglas (auth != null)
