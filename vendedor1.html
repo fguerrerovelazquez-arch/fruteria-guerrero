@@ -1224,17 +1224,57 @@ window.descargarPDF=async function(){
   finally{btn.classList.remove('sending');btn.textContent='📄 Descargar PDF';}
 };
 
-/* ============ IMPRIMIR TICKET ============ */
+/* ============ TICKET COMO TEXTO (para imprimir nítido, sin productos cancelados) ============ */
+function construirTicketHTML(){
+  const p=pedidosDB[detallePedidoId];
+  if(!p)return '';
+  const prods=(p.productos||[]).filter(pr=>!pr.cancelado);
+  const items=prods.map(pr=>{
+    const sur=pr.surtido!==null?pr.surtido:pr.pedido;
+    const importe=sur*pr.precio;
+    const u=pr.unidad||'kg';
+    let diff='';
+    if(pr.surtido!==null&&pr.surtido!==pr.pedido) diff=`<div class="r2"><span>pedido: ${pr.pedido} ${u}</span></div>`;
+    return `<div class="titem"><div class="r1"><span>${esc(pr.nombre)}</span><span>$${fmt(importe)}</span></div><div class="r2"><span>${sur} ${u} x $${fmt(pr.precio)}</span></div>${diff}</div>`;
+  }).join('');
+  const total=totalPedido(prods);
+  return `<h3>Frutería Guerrero</h3>
+    <div class="sub">Mercado de Abastos, Ciudad Obregón</div>
+    <div class="sub">Fecha: ${p.fecha} · ${p.hora}</div>
+    <hr>
+    <div class="tline"><span>Cliente:</span><span>${esc(p.cliente)}</span></div>
+    <div class="tline"><span>Folio:</span><span>#${p.folio}</span></div>
+    <hr>
+    ${items}
+    <hr>
+    <div class="ttotal"><span>TOTAL</span><span>$${fmt(total)}</span></div>
+    <div class="thanks">¡Gracias por su compra!</div>`;
+}
+
+/* ============ IMPRIMIR TICKET (texto real, no imagen, para que salga nítido) ============ */
 window.imprimirTicket=function(){
-  const canvas=dibujarTicketCanvas();
-  if(!canvas)return;
-  const imgData=canvas.toDataURL('image/png');
+  const contenido=construirTicketHTML();
+  if(!contenido)return;
   const win=window.open('','_blank');
   win.document.write(`<!DOCTYPE html><html><head><title>Imprimir Nota</title>
-    <style>@page{size:80mm auto;margin:0;}body{margin:0;padding:0;display:flex;justify-content:center;}
-    img{width:80mm;height:auto;}</style></head>
-    <body><img src="${imgData}" onload="window.print();"></body></html>`);
+    <style>
+      @page{size:80mm auto;margin:0;}
+      *{box-sizing:border-box;margin:0;padding:0;}
+      body{width:80mm;padding:5mm 5mm 10mm;font-family:'Courier New',Courier,monospace;color:#000;}
+      h3{text-align:center;font-size:16px;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;}
+      .sub{text-align:center;font-size:10.5px;margin-bottom:3px;}
+      hr{border:none;border-top:1px dashed #000;margin:7px 0;}
+      .tline{display:flex;justify-content:space-between;font-size:11.5px;margin:3px 0;}
+      .titem{font-size:11px;margin:5px 0;}
+      .titem .r1{display:flex;justify-content:space-between;font-weight:700;}
+      .titem .r2{display:flex;justify-content:space-between;font-size:10px;}
+      .ttotal{display:flex;justify-content:space-between;font-size:16px;font-weight:900;margin-top:9px;}
+      .thanks{text-align:center;font-size:10.5px;margin-top:11px;font-style:italic;}
+    </style></head>
+    <body>${contenido}</body></html>`);
   win.document.close();
+  win.focus();
+  setTimeout(()=>win.print(),150);
 };
 
 /* ============ COBRO ============ */
