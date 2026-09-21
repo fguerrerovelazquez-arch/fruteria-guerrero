@@ -1366,8 +1366,8 @@ window.verEdoCtaIdx=function(i){
 function renderEdoCta(){
   const nombre=edoCtaCliente;
   const pedidosCliente=Object.entries(pedidosDB).filter(([,p])=>p.cliente===nombre&&p.estado==='CERRADO').sort((a,b)=>(b[1].timestamps?.cerrado||0)-(a[1].timestamps?.cerrado||0));
-  let totalVentas=0,totalPagado=0,saldoPendiente=0;
-  pedidosCliente.forEach(([,p])=>{totalVentas+=(p.total||0);totalPagado+=(p.montoPagado||0);saldoPendiente+=(p.saldoPendiente||0);});
+  let saldoPendiente=0;
+  pedidosCliente.forEach(([,p])=>{saldoPendiente+=(p.saldoPendiente||0);});
 
   let html=`<div class="edo-header">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;">
@@ -1378,8 +1378,6 @@ function renderEdoCta(){
       </div>
     </div>
     <div class="edo-stats">
-      <div class="edo-stat"><div class="val val-blue">$${fmt(totalVentas)}</div><div class="lbl">Total vendido</div></div>
-      <div class="edo-stat"><div class="val val-green">$${fmt(totalPagado)}</div><div class="lbl">Total pagado</div></div>
       <div class="edo-stat"><div class="val val-red">$${fmt(saldoPendiente)}</div><div class="lbl">Saldo pendiente</div></div>
     </div>
   </div>`;
