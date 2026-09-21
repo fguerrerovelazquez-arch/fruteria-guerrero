@@ -449,6 +449,15 @@ function fmt(n){
   return (n||0).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});
 }
 
+/* ============ TOTAL DE UNA NOTA (excluye productos cancelados) ============ */
+function totalPedido(prods){
+  return (prods||[]).reduce((s,pr)=>{
+    if(pr.cancelado)return s;
+    const sur=pr.surtido!==null&&pr.surtido!==undefined?pr.surtido:pr.pedido;
+    return s+sur*pr.precio;
+  },0);
+}
+
 /* ============ AUTENTICACIÓN ============ */
 /* Firebase Auth exige un correo, así que el "nombre" que teclea el
    vendedor se traduce a un correo interno fijo (nunca se muestra). */
@@ -956,25 +965,35 @@ function renderDetalle(id){
   const p=pedidosDB[id];
   if(!p)return;
   const prods=p.productos||[];
-  const items=prods.map(pr=>{
+  const puedeCancelar=p.estado==='COMPLETADO';
+  const items=prods.map((pr,i)=>{
     const surtido=pr.surtido!==null?pr.surtido:pr.pedido;
     const importe=surtido*pr.precio;
     const u=pr.unidad||'kg';
+    if(pr.cancelado){
+      const deshacer=puedeCancelar?` · <a href="#" onclick="cancelarProductoNota('${id}',${i});return false;" style="color:#45566B;">deshacer</a>`:'';
+      return `<div class="titem" style="opacity:.55;">
+        <div class="r1"><span style="text-decoration:line-through;">${esc(pr.nombre)}</span><span style="text-decoration:line-through;">$${fmt(importe)}</span></div>
+        <div class="r2"><span style="color:#A63A2E;font-weight:700;">Cancelado</span>${deshacer}</div>
+      </div>`;
+    }
     let diff='';
     if(pr.surtido!==null&&pr.surtido!==pr.pedido) diff=`<div class="r2"><span>pedido: ${pr.pedido} ${u}</span></div>`;
-    return `<div class="titem"><div class="r1"><span>${esc(pr.nombre)}</span><span>$${fmt(importe)}</span></div><div class="r2"><span>${surtido} ${u} x $${fmt(pr.precio)}</span></div>${diff}</div>`;
+    const cancelarBtn=puedeCancelar?` <a href="#" onclick="cancelarProductoNota('${id}',${i});return false;" style="margin-left:8px;color:#A63A2E;text-decoration:none;font-weight:700;" title="Cancelar producto">✕</a>`:'';
+    return `<div class="titem"><div class="r1"><span>${esc(pr.nombre)}</span><span>$${fmt(importe)}${cancelarBtn}</span></div><div class="r2"><span>${surtido} ${u} x $${fmt(pr.precio)}</span></div>${diff}</div>`;
   }).join('');
-  const totalCalc=prods.reduce((s,pr)=>{const sur=pr.surtido!==null?pr.surtido:pr.pedido;return s+sur*pr.precio;},0);
+  const totalCalc=totalPedido(prods);
 
-  // Checklist (solo para COMPLETADO)
+  // Checklist (solo para COMPLETADO, sin productos cancelados)
   let checklistHtml='';
   if(p.estado==='COMPLETADO'){
     if(!checksState[id]) checksState[id]=prods.map(()=>false);
     const checks=checksState[id];
-    const done=checks.filter(Boolean).length;
+    const activos=prods.map((pr,i)=>({pr,i})).filter(x=>!x.pr.cancelado);
+    const done=activos.filter(x=>checks[x.i]).length;
     checklistHtml=`<div class="checklist">
       <div class="checklist-title">✅ Verificación de entrega</div>
-      ${prods.map((pr,i)=>{
+      ${activos.map(({pr,i})=>{
         const u=pr.unidad||'kg';
         const sur=pr.surtido!==null?pr.surtido:pr.pedido;
         return `<div class="chk-item ${checks[i]?'done':''}" onclick="toggleCheck('${id}',${i})">
@@ -983,7 +1002,7 @@ function renderDetalle(id){
           <div class="chk-detail">${sur} ${u}</div>
         </div>`;
       }).join('')}
-      <div class="chk-progress"><b>${done}</b> de ${prods.length} verificados</div>
+      <div class="chk-progress"><b>${done}</b> de ${activos.length} verificados</div>
     </div>`;
   }
 
@@ -1028,13 +1047,29 @@ window.toggleCheck=function(id,i){
   renderDetalle(id);
 };
 
+/* ============ CANCELAR/DESHACER UN PRODUCTO DE LA NOTA ============ */
+window.cancelarProductoNota=async function(id,i){
+  const p=pedidosDB[id];if(!p)return;
+  const prods=p.productos||[];
+  const pr=prods[i];if(!pr)return;
+  if(!pr.cancelado){
+    const activos=prods.filter(x=>!x.cancelado).length;
+    if(activos<=1){
+      alert('No puedes cancelar el último producto activo de la nota. Si ya no aplica, usa "Cancelar pedido" para cancelar la nota completa.');
+      return;
+    }
+    if(!confirm(`¿Cancelar "${pr.nombre}" de esta nota?`))return;
+  }
+  await update(ref(db,'pedidos/'+id+'/productos/'+i),{cancelado:!pr.cancelado});
+};
+
 /* ============ DIBUJAR TICKET EN CANVAS (sin html2canvas) ============ */
 function dibujarTicketCanvas(){
   const p=pedidosDB[detallePedidoId];
   if(!p)return null;
 
   const W=600, PAD=40, FONT='Courier New, Courier, monospace';
-  const prods=(p.productos||[]);
+  const prods=(p.productos||[]).filter(pr=>!pr.cancelado);
   // calcular altura
   let h=PAD;
   h+=30+20+20+20; // título + sub + fecha + espacio
@@ -1119,7 +1154,7 @@ function dibujarTicketCanvas(){
 
   // Total
   ctx.font=`bold 22px ${FONT}`;ctx.fillStyle='#1a1a1a';ctx.textAlign='left';
-  const totalCalc=prods.reduce((s,pr)=>{const sur=pr.surtido!==null?pr.surtido:pr.pedido;return s+sur*pr.precio;},0);
+  const totalCalc=totalPedido(prods);
   ctx.fillText('TOTAL',PAD,y);
   ctx.textAlign='right';
   ctx.fillText(`$${fmt(totalCalc)}`,W-PAD,y);y+=34;
@@ -1201,7 +1236,7 @@ window.imprimirTicket=function(){
 /* ============ COBRO ============ */
 window.abrirModalCobro=function(){
   const p=pedidosDB[detallePedidoId];if(!p)return;
-  const total=(p.productos||[]).reduce((s,pr)=>{const sur=pr.surtido!==null?pr.surtido:pr.pedido;return s+sur*pr.precio;},0);
+  const total=totalPedido(p.productos);
   document.getElementById('cobroInfo').innerHTML=`<b>${esc(p.cliente)}</b> — Folio #${p.folio}<br>Total: <b style="font-size:20px;">$${fmt(total)}</b>`;
   document.getElementById('abonoSection').style.display='none';
   document.getElementById('montoAbono').value='';
@@ -1212,7 +1247,7 @@ window.mostrarAbono=function(){document.getElementById('abonoSection').style.dis
 
 window.cerrarConPago=async function(tipo){
   const p=pedidosDB[detallePedidoId];if(!p)return;
-  const total=(p.productos||[]).reduce((s,pr)=>{const sur=pr.surtido!==null?pr.surtido:pr.pedido;return s+sur*pr.precio;},0);
+  const total=totalPedido(p.productos);
   let montoPagado=0, saldoPendiente=0;
   if(tipo==='pagado'){montoPagado=total;saldoPendiente=0;}
   else if(tipo==='credito'){montoPagado=0;saldoPendiente=total;}
