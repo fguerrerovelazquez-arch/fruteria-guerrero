@@ -250,6 +250,7 @@ input:focus,select:focus{outline:2px solid #45566B;border-color:#45566B;}
       <button class="btn btn-dl" onclick="descargarPDF()" id="btnPDF">📄 Descargar PDF</button>
       <button class="btn btn-ghost" onclick="imprimirTicket()" id="btnPrint">🖨️ Imprimir</button>
       <button class="btn btn-green" onclick="abrirModalCobro()" id="btnCerrar">💰 Registrar cobro y cerrar</button>
+      <button class="btn" style="background:#1565C0;color:#fff;display:none;" onclick="abrirAbonoEdoCta()" id="btnAbonoDetalle">💵 Registrar abono</button>
       <button class="btn btn-outline" onclick="reabrirPedido()" id="btnReabrir" style="display:none;">🔓 Reabrir pedido</button>
       <button class="btn btn-red" onclick="cancelarPedido()" id="btnCancelarDetalle" style="display:none;">Cancelar pedido</button>
     </div>
@@ -1024,16 +1025,19 @@ function renderDetalle(id){
   
   const actions=document.getElementById('sendActions');
   const btnCerrar=document.getElementById('btnCerrar');
+  const btnAbonoDetalle=document.getElementById('btnAbonoDetalle');
   const btnReabrir=document.getElementById('btnReabrir');
   const btnCancelarDetalle=document.getElementById('btnCancelarDetalle');
   if(p.estado==='COMPLETADO'){
     actions.style.display='flex';
     btnCerrar.style.display='block';
+    btnAbonoDetalle.style.display='none';
     btnReabrir.style.display='none';
     btnCancelarDetalle.style.display='block';
   } else if(p.estado==='CERRADO'){
     actions.style.display='flex';
     btnCerrar.style.display='none';
+    btnAbonoDetalle.style.display=(p.saldoPendiente||0)>0?'block':'none';
     btnReabrir.style.display='block';
     btnCancelarDetalle.style.display='none';
   } else {
@@ -1455,8 +1459,9 @@ window.verTicketDesdeEdoCta=function(id){
 
 /* ============ ABONO DESDE ESTADO DE CUENTA ============ */
 window.abrirAbonoEdoCta=function(id){
+  id=id||detallePedidoId;
   abonoEdoPedidoId=id;
-  const p=pedidosDB[id];
+  const p=pedidosDB[id];if(!p)return;
   document.getElementById('abonoEdoInfo').innerHTML=`Folio #${p.folio} — Debe: <b>$${fmt((p.saldoPendiente||0))}</b>`;
   document.getElementById('montoAbonoEdoCta').value='';
   document.getElementById('modalAbonoEdoCta').classList.add('open');
@@ -1475,7 +1480,7 @@ window.guardarAbonoEdoCta=async function(){
   await update(ref(db,'pedidos/'+abonoEdoPedidoId),{montoPagado:nuevoMontoPagado,saldoPendiente:nuevoSaldo,tipoPago:nuevoTipo,pagos});
   document.getElementById('modalAbonoEdoCta').classList.remove('open');
   alert(`✅ Abono de $${fmt(monto)} registrado.`);
-  renderEdoCta();
+  if(edoCtaCliente) renderEdoCta();
 };
 
 /* ============ RESUMEN DEL DÍA ============ */
