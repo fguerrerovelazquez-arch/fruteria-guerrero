@@ -1316,14 +1316,12 @@ window.renderClientes=function(){
   Object.entries(pedidosDB).forEach(([id,p])=>{
     if(p.estado!=='CERRADO')return;
     const c=p.cliente;
-    if(!balances[c])balances[c]={totalVentas:0,totalPagado:0,saldoPendiente:0,pedidos:0};
-    balances[c].totalVentas+=(p.total||0);
-    balances[c].totalPagado+=(p.montoPagado||0);
+    if(!balances[c])balances[c]={saldoPendiente:0,pedidos:0};
     balances[c].saldoPendiente+=(p.saldoPendiente||0);
     balances[c].pedidos++;
   });
   // also include clients with no orders
-  clientes.forEach(c=>{if(!balances[c.nombre])balances[c.nombre]={totalVentas:0,totalPagado:0,saldoPendiente:0,pedidos:0};});
+  clientes.forEach(c=>{if(!balances[c.nombre])balances[c.nombre]={saldoPendiente:0,pedidos:0};});
 
   let entries=Object.entries(balances);
   if(q) entries=entries.filter(([n])=>n.toLowerCase().includes(q));
@@ -1347,7 +1345,6 @@ window.renderClientes=function(){
       <div class="ocard-right">
         ${deuda?`<div class="ocard-total-lbl" style="color:#A63A2E;">DEBE</div><div class="ocard-total" style="color:#A63A2E;">$${fmt(b.saldoPendiente)}</div>`
         :`<div class="ocard-total-lbl">SALDO</div><div class="ocard-total val-green">$0.00</div>`}
-        <div class="ocard-hora" style="margin-top:4px;">Total vendido: $${fmt(b.totalVentas)}</div>
       </div>
     </div>`;
   }).join('');
