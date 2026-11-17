@@ -92,9 +92,9 @@ input:focus,select:focus{outline:2px solid #45566B;border-color:#45566B;}
 .fbtn.active{background:#45566B;color:#fff;border-color:#45566B;}
 .fbtn .fc{font-weight:700;margin-left:4px;}
 /* MODAL */
-.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:100;align-items:center;justify-content:center;}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:100;align-items:center;justify-content:center;padding:20px;}
 .modal-bg.open{display:flex;}
-.modal{background:#fff;border-radius:14px;padding:24px;width:90%;max-width:420px;}
+.modal{background:#fff;border-radius:14px;padding:24px;width:90%;max-width:420px;max-height:85vh;overflow-y:auto;-webkit-overflow-scrolling:touch;}
 .modal h3{font-size:18px;margin-bottom:14px;color:#2C3540;}
 .modal input{margin-bottom:14px;}
 .modal-btns{display:flex;gap:10px;justify-content:flex-end;}
@@ -178,6 +178,14 @@ input:focus,select:focus{outline:2px solid #45566B;border-color:#45566B;}
     var r=e.reason;
     mostrarError('Promesa rechazada: '+(r&&r.message?r.message:r));
   });
+})();
+</script>
+<!-- BLOQUEAR EL FONDO MIENTRAS HAY UN MODAL ABIERTO (evita que la pantalla de atrás se mueva) -->
+<script>
+(function(){
+  new MutationObserver(function(){
+    document.body.style.overflow=document.querySelector('.modal-bg.open')?'hidden':'';
+  }).observe(document.body,{attributes:true,attributeFilter:['class'],subtree:true});
 })();
 </script>
 <!-- PANTALLA DE ACCESO -->
