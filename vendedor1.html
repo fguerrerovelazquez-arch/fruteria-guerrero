@@ -63,6 +63,9 @@ input:focus,select:focus{outline:2px solid #45566B;border-color:#45566B;}
 .tbl .qty-wrap{display:flex;align-items:center;gap:4px;}
 .tbl .ubtn{font-size:13px;font-weight:700;padding:4px 8px;border-radius:6px;border:1.5px solid #45566B;background:#fff;color:#45566B;cursor:pointer;font-family:inherit;white-space:nowrap;min-width:42px;text-align:center;}
 .tbl .ubtn:active{background:#45566B;color:#fff;}
+/* Lista del pedido nuevo: scroll propio cuando crece mucho, encabezado fijo */
+#tablaCard{max-height:50vh;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+#tablaCard .tbl thead th{position:sticky;top:0;background:#fff;z-index:1;}
 .empty{padding:20px 0;text-align:center;color:#8B8A83;font-size:15px;}
 /* SEARCH */
 .search-list{list-style:none;max-height:220px;overflow-y:auto;border-radius:0 0 8px 8px;border:1px solid #D9D7D1;border-top:none;display:none;background:#fff;margin-top:-1px;}
