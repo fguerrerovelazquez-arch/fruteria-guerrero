@@ -1290,7 +1290,11 @@ function construirTicketHTML(){
     ${items}
     <hr>
     <div class="ttotal"><span>TOTAL</span><span>$${fmt(total)}</span></div>
-    <div class="thanks">¡Gracias por su compra!</div>`;
+    <div class="thanks">¡Gracias por su compra!</div>
+    <div class="firma">
+      <div class="firma-linea"></div>
+      <div class="firma-label">Firma</div>
+    </div>`;
 }
 
 /* ============ IMPRIMIR TICKET (texto real, no imagen, para que salga nítido) ============ */
@@ -1302,7 +1306,7 @@ window.imprimirTicket=function(){
     <style>
       @page{size:80mm auto;margin:0;}
       *{box-sizing:border-box;margin:0;padding:0;}
-      body{width:80mm;padding:5mm 5mm 10mm;font-family:'Courier New',Courier,monospace;font-weight:700;color:#000;-webkit-font-smoothing:none;}
+      body{width:80mm;padding:5mm 5mm 35mm;font-family:'Courier New',Courier,monospace;font-weight:700;color:#000;-webkit-font-smoothing:none;}
       h3{text-align:center;font-size:17px;text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;}
       .sub{text-align:center;font-size:11.5px;margin-bottom:3px;}
       hr{border:none;border-top:2px dashed #000;margin:8px 0;}
@@ -1312,6 +1316,9 @@ window.imprimirTicket=function(){
       .titem .r2{display:flex;justify-content:space-between;font-size:11.5px;}
       .ttotal{display:flex;justify-content:space-between;font-size:17px;margin-top:10px;}
       .thanks{text-align:center;font-size:11.5px;margin-top:12px;}
+      .firma{margin-top:30px;}
+      .firma-linea{border-top:1.5px solid #000;margin:0 8mm;}
+      .firma-label{text-align:center;font-size:10.5px;margin-top:5px;}
     </style></head>
     <body>${contenido}</body></html>`);
   win.document.close();
