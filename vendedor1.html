@@ -550,7 +550,11 @@ function iniciarListeners(){
     updateCntDia();
     if(document.getElementById('pageDia').classList.contains('active')) renderPedidosDia();
     if(detallePedidoId && pedidosDB[detallePedidoId]){
-      renderDetalle(detallePedidoId);
+      const nuevoJSON=JSON.stringify(pedidosDB[detallePedidoId]);
+      if(nuevoJSON!==ultimoDetalleJSON){
+        ultimoDetalleJSON=nuevoJSON;
+        renderDetalle(detallePedidoId);
+      }
     }
   });
 }
@@ -607,6 +611,7 @@ let clientes = [];
 let pedidosDB = {};
 let filtroActual = "todos";
 let detallePedidoId = null;
+let ultimoDetalleJSON = null; // evita redibujar el ticket abierto cuando cambia OTRO pedido
 let editPedidoId = null;
 let editProductos = [];
 let preciosDia = {};
@@ -984,6 +989,7 @@ window.setFiltro=function(f){filtroActual=f;renderPedidosDia();};
 /* ============ DETALLE / TICKET ============ */
 window.verDetalle=function(id){
   detallePedidoId=id;
+  ultimoDetalleJSON=JSON.stringify(pedidosDB[id]);
   renderDetalle(id);
   showPage('detalle');
 };
@@ -1515,6 +1521,7 @@ window.eliminarClienteActual=async function(){
 /* ============ VER TICKET DESDE ESTADO DE CUENTA ============ */
 window.verTicketDesdeEdoCta=function(id){
   detallePedidoId=id;
+  ultimoDetalleJSON=JSON.stringify(pedidosDB[id]);
   renderDetalle(id);
   // Override back button to go to edocta instead of dia
   const backBtn=document.querySelector('#pageDetalle .btn-ghost');
